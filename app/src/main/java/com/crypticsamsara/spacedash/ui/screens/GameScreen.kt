@@ -1,11 +1,17 @@
 package com.crypticsamsara.spacedash.ui.screens
 
+import android.R.attr.radius
+import android.R.attr.x
+import android.R.attr.y
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
@@ -26,11 +32,14 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.crypticsamsara.spacedash.ui.components.ObstacleRenderer.drawObstacle
 import com.crypticsamsara.spacedash.ui.components.PlayerRenderer
 import com.crypticsamsara.spacedash.ui.components.PlayerRenderer.drawPlayer
+import com.crypticsamsara.spacedash.ui.theme.DangerRed
 import com.crypticsamsara.spacedash.ui.theme.NeonCyan
 import com.crypticsamsara.spacedash.ui.theme.SpaceBlack
 import com.crypticsamsara.spacedash.ui.theme.StarWhite
@@ -43,6 +52,8 @@ fun GameScreen (
     viewModel: GameViewModel = viewModel()
 ) {
     val gameState = viewModel.gameState
+    val obstacles = viewModel.obstacles
+    val stars = viewModel.stars
 
     // For testing to start game automatically
     LaunchedEffect(Unit) {
@@ -67,16 +78,17 @@ fun GameScreen (
             val canvasHeight = size.height
 
             // Starfield background (simple stars)
-            repeat(50) {
-                val x = Random.nextFloat() * canvasWidth
-                val y = Random.nextFloat() * canvasHeight
-                val radius = Random.nextFloat() * 2f + 1f
-
+            stars.forEach { star ->
                 drawCircle(
                     color = StarWhite.copy(alpha = Random.nextFloat() * 0.5f + 0.5f),
-                    radius = radius,
-                    center = Offset(x, y)
+                    radius = star.radius,
+                    center = star.position
                 )
+            }
+
+            // obstacles
+            obstacles.forEach { obstacle ->
+                drawObstacle(obstacle, canvasWidth)
             }
 
             // Player
@@ -88,57 +100,96 @@ fun GameScreen (
             }
         }
 
-            // Score Display
-            if (gameState.isPlaying) {
-                Text(
-                    text = "Score: ${gameState.score}",
-                    color = NeonCyan,
-                    fontSize = 24.sp,
-                    modifier = Modifier
-                        .align(Alignment.TopCenter)
-                        .padding(top = 40.dp)
-                )
+        // Score Display
+        if (gameState.isPlaying) {
+            Text(
+                text = "Score: ${gameState.score}",
+                color = NeonCyan,
+                fontSize = 24.sp,
+                modifier = Modifier
+                    .align(Alignment.TopCenter)
+                    .padding(top = 40.dp)
+            )
+        }
+
+        // Game Over Overlay
+        if (gameState.isGameOver) { // To make it visible only during gameplay
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(Color.Black.copy(alpha = 0.7f)),
+                contentAlignment = Alignment.Center
+            ) {
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.Center
+                ) {
+                    Text(
+                        text = "GAME OVER",
+                        color = DangerRed,
+                        fontSize = 48.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+
+                    Spacer(modifier = Modifier.height(32.dp))
+
+                    Button(
+                        onClick = { viewModel.restartGame() },
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = NeonCyan
+                        ),
+                        modifier = Modifier.size(width = 200.dp, height = 60.dp)
+                    ) {
+                        Text(
+                            text = "RESTART",
+                            fontSize = 20.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = SpaceBlack
+                        )
+                    }
+                }
             }
+        }
 
         // Control buttons at bottom
-        Row(
-            modifier = Modifier
-                .align(Alignment.BottomCenter)
-                .padding(bottom = 40.dp),
-            horizontalArrangement = Arrangement.SpaceEvenly
-        ) {
-            // Left button
-            Button(
-                onClick = { viewModel.movePlayerLeft() },
-                modifier = Modifier.size( 80.dp),
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = NeonCyan.copy(alpha = 0.3f)
-                ),
-                enabled = gameState.isPlaying && !gameState.isGameOver
+        if (gameState.isPlaying && !gameState.isGameOver) {
+            Row(
+                modifier = Modifier
+                    .align(Alignment.BottomCenter)
+                    .padding(bottom = 40.dp),
+                horizontalArrangement = Arrangement.SpaceEvenly
             ) {
-                Icon(
-                    imageVector = Icons.AutoMirrored.Filled.KeyboardArrowLeft,
-                    contentDescription = "Move Left",
-                    tint = StarWhite,
-                    modifier = Modifier.size(40.dp)
-                )
-            }
+                // Left button
+                Button(
+                    onClick = { viewModel.movePlayerLeft() },
+                    modifier = Modifier.size(80.dp),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = NeonCyan.copy(alpha = 0.3f)
+                    )
+                ) {
+                    Icon(
+                        imageVector = Icons.AutoMirrored.Filled.KeyboardArrowLeft,
+                        contentDescription = "Move Left",
+                        tint = StarWhite,
+                        modifier = Modifier.size(40.dp)
+                    )
+                }
 
-            // Right button
-            Button(
-                onClick = { viewModel.movePlayerRight() },
-                modifier = Modifier.size( 80.dp),
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = NeonCyan.copy(alpha = 0.3f)
-                ),
-                enabled = gameState.isPlaying && !gameState.isGameOver
-            ) {
-                Icon(
-                    imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
-                    contentDescription = "Move Right",
-                    tint = StarWhite,
-                    modifier = Modifier.size(40.dp)
-                )
+                // Right button
+                Button(
+                    onClick = { viewModel.movePlayerRight() },
+                    modifier = Modifier.size(80.dp),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = NeonCyan.copy(alpha = 0.3f)
+                    ),
+                ) {
+                    Icon(
+                        imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                        contentDescription = "Move Right",
+                        tint = StarWhite,
+                        modifier = Modifier.size(40.dp)
+                    )
+                }
             }
         }
     }

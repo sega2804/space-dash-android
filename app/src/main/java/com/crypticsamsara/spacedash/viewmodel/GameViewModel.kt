@@ -10,6 +10,8 @@ import com.crypticsamsara.spacedash.model.Obstacle
 import com.crypticsamsara.spacedash.model.ObstacleFactory
 import com.crypticsamsara.spacedash.model.Star
 import com.crypticsamsara.spacedash.model.StarFactory
+import com.crypticsamsara.spacedash.ui.components.PlayerRenderer
+import com.crypticsamsara.spacedash.utils.CollisionDetector
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
@@ -71,7 +73,7 @@ class GameViewModel: ViewModel() {
         gameLoopJob?.cancel()
         gameLoopJob = viewModelScope.launch {
             while (isActive && gameState.isPlaying) {
-                updateObstacles()
+                updateGame()
                 delay(16L) // 60 FPS
 
             }
@@ -88,11 +90,15 @@ class GameViewModel: ViewModel() {
         }
     }
 
-    private fun updateObstacles() {
+    private fun updateGame() {
         // movement from down
         obstacles.forEach { obstacle ->
             obstacle.y += obstacle.speed
         }
+
+        // Check collisions
+        checkCollisions()
+
         // Remove obstacles that are off screen
         obstacles.removeAll { it.y > screenHeight + 100f}
     }
@@ -102,6 +108,27 @@ class GameViewModel: ViewModel() {
             val newObstacle = ObstacleFactory.createRandomObstacle(screenWidth)
             obstacles.add(newObstacle)
         }
+    }
+
+    private fun checkCollisions() {
+        if (!gameState.isPlaying || gameState.isGameOver) return
+
+        val playerX = getPlayerPixelX()
+        val playerY = screenHeight - PlayerRenderer.PLAYER_HEIGHT - 100f
+
+        // Check each obstacle for collision
+        obstacles.forEach { obstacle ->
+            if (CollisionDetector.checkCollision(playerX, playerY, obstacle, screenWidth)) {
+                triggerGameOver()
+                return
+            }
+        }
+    }
+
+    private fun triggerGameOver() {
+        gameState = gameState.copy(isPlaying = false, isGameOver = true)
+        gameLoopJob?.cancel()
+        spawnJob?.cancel()
     }
     fun movePlayerLeft() {
         if (!gameState.isPlaying || gameState.isGameOver) return
@@ -117,6 +144,10 @@ class GameViewModel: ViewModel() {
         // Move right, but don't go above 1
         val newX = (gameState.playerX + 0.05f).coerceAtMost(1f)
         gameState = gameState.copy(playerX = newX)
+    }
+
+    fun restartGame() {
+        startGame()
     }
 
     fun stopGame() {

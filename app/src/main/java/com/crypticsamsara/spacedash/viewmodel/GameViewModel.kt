@@ -8,6 +8,8 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.crypticsamsara.spacedash.model.Obstacle
 import com.crypticsamsara.spacedash.model.ObstacleFactory
+import com.crypticsamsara.spacedash.model.Star
+import com.crypticsamsara.spacedash.model.StarFactory
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
@@ -26,6 +28,10 @@ class GameViewModel: ViewModel() {
     // obstacles list
     val obstacles = mutableStateListOf<Obstacle>()
 
+    // Stars List (static)
+    var stars = mutableStateListOf<Star>()
+
+
     // Screen dimensions
     var screenWidth by mutableStateOf(0f)
         private set
@@ -41,6 +47,11 @@ class GameViewModel: ViewModel() {
     fun setScreenSize (width: Float, height: Float) {
         screenWidth = width
         screenHeight = height
+
+        // Generation of stars once when screen size is known
+        if (stars.isEmpty() && width > 0 && height > 0) {
+            stars.addAll(StarFactory.generateStarfield(width, height, 100))
+        }
     }
 
     fun startGame() {
@@ -61,7 +72,7 @@ class GameViewModel: ViewModel() {
         gameLoopJob = viewModelScope.launch {
             while (isActive && gameState.isPlaying) {
                 updateObstacles()
-                delay(16) // 60 FPS
+                delay(16L) // 60 FPS
 
             }
         }

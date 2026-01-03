@@ -1,5 +1,8 @@
 package com.crypticsamsara.spacedash.ui.screens
 
+import android.R.attr.radius
+import android.R.attr.x
+import android.R.attr.y
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -45,6 +48,7 @@ fun GameScreen (
 ) {
     val gameState = viewModel.gameState
     val obstacles = viewModel.obstacles
+    val stars = viewModel.stars
 
     // For testing to start game automatically
     LaunchedEffect(Unit) {
@@ -69,15 +73,11 @@ fun GameScreen (
             val canvasHeight = size.height
 
             // Starfield background (simple stars)
-            repeat(50) {
-                val x = Random.nextFloat() * canvasWidth
-                val y = Random.nextFloat() * canvasHeight
-                val radius = Random.nextFloat() * 2f + 1f
-
+            stars.forEach { star ->
                 drawCircle(
                     color = StarWhite.copy(alpha = Random.nextFloat() * 0.5f + 0.5f),
-                    radius = radius,
-                    center = Offset(x, y)
+                    radius = star.radius,
+                    center = star.position
                 )
             }
 

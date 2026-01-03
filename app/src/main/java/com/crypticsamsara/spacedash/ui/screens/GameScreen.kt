@@ -29,6 +29,7 @@ import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.crypticsamsara.spacedash.ui.components.ObstacleRenderer.drawObstacle
 import com.crypticsamsara.spacedash.ui.components.PlayerRenderer
 import com.crypticsamsara.spacedash.ui.components.PlayerRenderer.drawPlayer
 import com.crypticsamsara.spacedash.ui.theme.NeonCyan
@@ -43,6 +44,7 @@ fun GameScreen (
     viewModel: GameViewModel = viewModel()
 ) {
     val gameState = viewModel.gameState
+    val obstacles = viewModel.obstacles
 
     // For testing to start game automatically
     LaunchedEffect(Unit) {
@@ -77,6 +79,11 @@ fun GameScreen (
                     radius = radius,
                     center = Offset(x, y)
                 )
+            }
+
+            // obstacles
+            obstacles.forEach { obstacle ->
+                drawObstacle(obstacle, canvasWidth)
             }
 
             // Player

@@ -1,6 +1,7 @@
 package com.crypticsamsara.spacedash.viewmodel
 
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
@@ -21,7 +22,9 @@ data class GameState(
     val isPlaying: Boolean = false,
     val score: Int = 0,
     val playerX: Float = 0.5f, // Position
-    val isGameOver: Boolean = false
+    val isGameOver: Boolean = false,
+    val survivalTime: Long = 0L,
+    val obstaclesDodged: Int = 0
 )
 class GameViewModel: ViewModel() {
     var gameState by mutableStateOf(GameState())
@@ -30,20 +33,30 @@ class GameViewModel: ViewModel() {
     // obstacles list
     val obstacles = mutableStateListOf<Obstacle>()
 
+    // tracking dodged obstacles
+    private val dodgedObstacleIds = mutableSetOf<Int>()
+
     // Stars List (static)
     var stars = mutableStateListOf<Star>()
 
-
     // Screen dimensions
-    var screenWidth by mutableStateOf(0f)
+    var screenWidth by mutableFloatStateOf(0f)
         private set
 
-    var screenHeight by mutableStateOf(0f)
+    var screenHeight by mutableFloatStateOf(0f)
         private set
 
     // Game loop job
     private var gameLoopJob: Job? = null
     private var spawnJob: Job? = null
+    private var scoreJob: Job? = null
+
+    // Scoring constraints
+    private companion object {
+        const val POINTS_PER_SECOND = 10
+        const val POINTS_PER_DODGE = 50
+        const val NEAR_MISS_BONUS = 25
+    }
 
 
     fun setScreenSize (width: Float, height: Float) {
@@ -61,12 +74,15 @@ class GameViewModel: ViewModel() {
             isPlaying = true,
             score = 0,
             playerX = 0.5f,
-            isGameOver = false
+            isGameOver = false,
+            survivalTime = 0L,
+            obstaclesDodged = 0
         )
         obstacles.clear()
+        dodgedObstacleIds.clear()
         startGameLoop()
         startObstacleSpawner()
-
+        startScoreTimer()
     }
 
     private fun startGameLoop() {
@@ -90,18 +106,73 @@ class GameViewModel: ViewModel() {
         }
     }
 
+    private fun startScoreTimer() {
+        scoreJob?.cancel()
+        val startTime = System.currentTimeMillis()
+
+        scoreJob = viewModelScope.launch {
+            while (isActive && gameState.isPlaying) {
+                val currentTime = System.currentTimeMillis()
+                val survivalTime = currentTime - startTime
+
+                // Update survival time
+                gameState = gameState.copy(survivalTime = survivalTime)
+
+                // Add time-based score (10 points per second)
+                val timeScore = (survivalTime / 100) // 1 point per 100ms = 10
+                val totalScore = timeScore.toInt() + (gameState.obstaclesDodged * POINTS_PER_DODGE)
+
+                gameState = gameState.copy(score = totalScore)
+
+                delay(100L) // Update every 100ms
+            }
+        }
+    }
+
     private fun updateGame() {
         // movement from down
         obstacles.forEach { obstacle ->
             obstacle.y += obstacle.speed
         }
 
+        // Check for dodged obstacles
+        checkDodgedObstacles()
+
         // Check collisions
         checkCollisions()
 
         // Remove obstacles that are off screen
-        obstacles.removeAll { it.y > screenHeight + 100f}
+        obstacles.removeAll {
+            val isOffScreen = it.y > screenHeight + 100f
+            if (isOffScreen) {
+                dodgedObstacleIds.remove(it.id) // Clean up tracking
+            }
+            isOffScreen
+        }
     }
+
+    private fun checkDodgedObstacles() {
+        val playerY = screenHeight - PlayerRenderer.PLAYER_HEIGHT - 100f
+
+        obstacles.forEach { obstacle ->
+            // check if obstacle has passed the player and hasn't been counted yet
+            if (obstacle.y > playerY + PlayerRenderer.PLAYER_HEIGHT &&
+                !dodgedObstacleIds.contains(obstacle.id)) {
+
+                dodgedObstacleIds.add(obstacle.id)
+
+                // Increment dodged count
+                val newDodgeCount = gameState.obstaclesDodged + 1
+                gameState = gameState.copy(obstaclesDodged = newDodgeCount)
+
+                // Add dodge bonus to score
+                val dodgeBonus = POINTS_PER_DODGE * newDodgeCount
+                val timeScore = (gameState.survivalTime / 100).toInt()
+                gameState = gameState.copy(score = timeScore + dodgeBonus)
+            }
+        }
+    }
+
 
     private fun spawnObstacles() {
         if (screenWidth > 0) {
@@ -129,6 +200,7 @@ class GameViewModel: ViewModel() {
         gameState = gameState.copy(isPlaying = false, isGameOver = true)
         gameLoopJob?.cancel()
         spawnJob?.cancel()
+        scoreJob?.cancel()
     }
     fun movePlayerLeft() {
         if (!gameState.isPlaying || gameState.isGameOver) return
@@ -154,6 +226,7 @@ class GameViewModel: ViewModel() {
         gameState = gameState.copy(isPlaying = false, isGameOver = true)
         gameLoopJob?.cancel()
         spawnJob?.cancel()
+        scoreJob?.cancel()
     }
 
     // Get player position in pixels
@@ -161,9 +234,18 @@ class GameViewModel: ViewModel() {
         return gameState.playerX * screenWidth
     }
 
+    // Helper to format survival time
+    fun getFormattedSurvivalTime(): String {
+        val seconds = gameState.survivalTime / 1000
+        val minutes = seconds / 60
+        val remainingSeconds = seconds % 60
+        return String.format("%02d:%02d", minutes, remainingSeconds)
+    }
+
     override fun onCleared() {
         super.onCleared()
         gameLoopJob?.cancel()
         spawnJob?.cancel()
+        scoreJob?.cancel()
     }
 }

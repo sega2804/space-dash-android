@@ -41,6 +41,7 @@ import com.crypticsamsara.spacedash.ui.components.PlayerRenderer
 import com.crypticsamsara.spacedash.ui.components.PlayerRenderer.drawPlayer
 import com.crypticsamsara.spacedash.ui.theme.DangerRed
 import com.crypticsamsara.spacedash.ui.theme.NeonCyan
+import com.crypticsamsara.spacedash.ui.theme.NeonPurple
 import com.crypticsamsara.spacedash.ui.theme.SpaceBlack
 import com.crypticsamsara.spacedash.ui.theme.StarWhite
 import com.crypticsamsara.spacedash.viewmodel.GameViewModel
@@ -92,7 +93,7 @@ fun GameScreen (
             }
 
             // Player
-            if (gameState.isPlaying) {
+            if (gameState.isPlaying || gameState.isGameOver) {
                 val playerX = viewModel.getPlayerPixelX()
                 val playerY = canvasHeight - PlayerRenderer.PLAYER_HEIGHT - 100f
 
@@ -101,15 +102,58 @@ fun GameScreen (
         }
 
         // Score Display
-        if (gameState.isPlaying) {
-            Text(
-                text = "Score: ${gameState.score}",
-                color = NeonCyan,
-                fontSize = 24.sp,
+        if (gameState.isPlaying || gameState.isGameOver) {
+            Column(
                 modifier = Modifier
                     .align(Alignment.TopCenter)
-                    .padding(top = 40.dp)
-            )
+                    .padding(top = 32.dp),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+
+                // Main Score
+                Text(
+                    text = "Score: ${gameState.score}",
+                    color = NeonCyan,
+                    fontSize = 48.sp,
+                    fontWeight = FontWeight.Bold
+                )
+
+                // Stats row
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(24.dp),
+                    modifier = Modifier.padding(top = 8.dp)
+                ) {
+                    // Time survived
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Text(
+                            text = viewModel.getFormattedSurvivalTime(),
+                            color = StarWhite,
+                            fontSize = 16.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+                        Text(
+                            text = "TIME",
+                            color = StarWhite.copy(alpha = 0.6f),
+                            fontSize = 10.sp
+                        )
+                    }
+
+                    // Obstacles dodged
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Text(
+                            text = "${gameState.obstaclesDodged}",
+                            color = NeonPurple,
+                            fontSize = 16.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+                        Text(
+                            text = "DODGED",
+                            color = StarWhite.copy(alpha = 0.6f),
+                            fontSize = 10.sp
+                        )
+                    }
+                }
+            }
         }
 
         // Game Over Overlay
@@ -132,6 +176,43 @@ fun GameScreen (
                     )
 
                     Spacer(modifier = Modifier.height(32.dp))
+
+
+                    // Stats summary
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(32.dp)
+                    ) {
+
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            Text(
+                                text = viewModel.getFormattedSurvivalTime(),
+                                color = StarWhite,
+                                fontSize = 24.sp,
+                                fontWeight = FontWeight.Bold
+                            )
+                            Text(
+                                text = "Survival Time",
+                                color = StarWhite.copy(alpha = 0.6f),
+                                fontSize = 14.sp
+                            )
+                        }
+
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            Text(
+                                text = "${gameState.obstaclesDodged}",
+                                color = NeonPurple,
+                                fontSize = 24.sp,
+                                fontWeight = FontWeight.Bold
+                            )
+                            Text(
+                                text = "Obstacles Dodged",
+                                color = StarWhite.copy(alpha = 0.6f),
+                                fontSize = 14.sp
+                            )
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(40.dp))
 
                     Button(
                         onClick = { viewModel.restartGame() },

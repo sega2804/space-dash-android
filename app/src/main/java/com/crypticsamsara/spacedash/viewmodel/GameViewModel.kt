@@ -24,7 +24,8 @@ data class GameState(
     val playerX: Float = 0.5f, // Position
     val isGameOver: Boolean = false,
     val survivalTime: Long = 0L,
-    val obstaclesDodged: Int = 0
+    val obstaclesDodged: Int = 0,
+    val highScore: Int = 0
 )
 class GameViewModel: ViewModel() {
     var gameState by mutableStateOf(GameState())
@@ -51,6 +52,9 @@ class GameViewModel: ViewModel() {
     private var spawnJob: Job? = null
     private var scoreJob: Job? = null
 
+    // High Score
+    private var sessionHighScore = 0
+
     // Scoring constraints
     private companion object {
         const val POINTS_PER_SECOND = 10
@@ -76,7 +80,8 @@ class GameViewModel: ViewModel() {
             playerX = 0.5f,
             isGameOver = false,
             survivalTime = 0L,
-            obstaclesDodged = 0
+            obstaclesDodged = 0,
+            highScore = sessionHighScore
         )
         obstacles.clear()
         dodgedObstacleIds.clear()
@@ -91,7 +96,6 @@ class GameViewModel: ViewModel() {
             while (isActive && gameState.isPlaying) {
                 updateGame()
                 delay(16L) // 60 FPS
-
             }
         }
     }
@@ -197,7 +201,16 @@ class GameViewModel: ViewModel() {
     }
 
     private fun triggerGameOver() {
-        gameState = gameState.copy(isPlaying = false, isGameOver = true)
+        // Update high score if current is higher
+        if (gameState.score > sessionHighScore) {
+            sessionHighScore = gameState.score
+        }
+
+        gameState = gameState.copy(
+            isPlaying = false,
+            isGameOver = true,
+            highScore = sessionHighScore
+            )
         gameLoopJob?.cancel()
         spawnJob?.cancel()
         scoreJob?.cancel()
@@ -223,7 +236,13 @@ class GameViewModel: ViewModel() {
     }
 
     fun stopGame() {
-        gameState = gameState.copy(isPlaying = false, isGameOver = true)
+        if (gameState.score > sessionHighScore) {
+            sessionHighScore = gameState.score
+        }
+        gameState = gameState.copy(
+            isPlaying = false,
+            isGameOver = true,
+            highScore = sessionHighScore)
         gameLoopJob?.cancel()
         spawnJob?.cancel()
         scoreJob?.cancel()

@@ -103,6 +103,7 @@ fun GameScreen (
 
         // Score Display
         if (gameState.isPlaying || gameState.isGameOver) {
+          /*
             Column(
                 modifier = Modifier
                     .align(Alignment.TopCenter)
@@ -230,6 +231,14 @@ fun GameScreen (
                     }
                 }
             }
+*/
+            GameOverScreen(
+                score = gameState.score,
+                survivalTime = viewModel.getFormattedSurvivalTime(),
+                obstacleDodges = gameState.obstaclesDodged,
+                highScore = gameState.highScore,
+                onRestart = { viewModel.restartGame()}
+            )
         }
 
         // Control buttons at bottom

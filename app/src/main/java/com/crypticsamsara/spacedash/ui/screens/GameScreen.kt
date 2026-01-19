@@ -276,8 +276,7 @@ fun GameScreen (
                 highScore = gameState.highScore,
                 onRestart = {
                     particleSystem.clear() // Clear particles on restart
-                    viewModel.restartGame()},
-                onButtonClick = { viewModel.onButtonClick()}
+                    viewModel.restartGame()}
             )
         }
 
@@ -292,7 +291,7 @@ fun GameScreen (
                 // Left button
                 Button(
                     onClick = {
-                        viewModel.onButtonClick()
+                        viewModel.soundManager?.playClick()
                         viewModel.movePlayerLeft() },
                     modifier = Modifier.size(80.dp),
                     colors = ButtonDefaults.buttonColors(
@@ -310,7 +309,7 @@ fun GameScreen (
                 // Right button
                 Button(
                     onClick = {
-                        viewModel.onButtonClick()
+                        viewModel.soundManager?.playClick()
                         viewModel.movePlayerRight() },
                     modifier = Modifier.size(80.dp),
                     colors = ButtonDefaults.buttonColors(

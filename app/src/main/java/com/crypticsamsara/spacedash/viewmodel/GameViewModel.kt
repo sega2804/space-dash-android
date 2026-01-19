@@ -7,10 +7,12 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.crypticsamsara.spacedash.data.PreferencesManager
 import com.crypticsamsara.spacedash.model.Obstacle
 import com.crypticsamsara.spacedash.model.ObstacleFactory
 import com.crypticsamsara.spacedash.model.Star
 import com.crypticsamsara.spacedash.model.StarFactory
+import com.crypticsamsara.spacedash.ui.audio.SoundManager
 import com.crypticsamsara.spacedash.ui.components.PlayerRenderer
 import com.crypticsamsara.spacedash.utils.CollisionDetector
 import kotlinx.coroutines.Job
@@ -30,7 +32,9 @@ data class GameState(
     val currentCombo: Int = 0,
     val maxComboReached: Int = 0
 )
-class GameViewModel: ViewModel() {
+class GameViewModel(
+     val soundManager: SoundManager? = null
+): ViewModel() {
     var gameState by mutableStateOf(GameState())
     private set
 
@@ -50,6 +54,7 @@ class GameViewModel: ViewModel() {
     var screenHeight by mutableFloatStateOf(0f)
         private set
 
+
     // Game loop job
     private var gameLoopJob: Job? = null
     private var spawnJob: Job? = null
@@ -57,6 +62,9 @@ class GameViewModel: ViewModel() {
 
     // High Score
     private var sessionHighScore = 0
+
+    var onExplosion: ((Float, Float) -> Unit)? = null
+
 
     // Scoring constraints
     private companion object {
@@ -88,6 +96,8 @@ class GameViewModel: ViewModel() {
         )
         obstacles.clear()
         dodgedObstacleIds.clear()
+
+        soundManager?.startMusic()
         startGameLoop()
         startObstacleSpawner()
         startScoreTimer()
@@ -168,6 +178,9 @@ class GameViewModel: ViewModel() {
 
                 dodgedObstacleIds.add(obstacle.id)
 
+                // Dodge sound
+                soundManager?.playDodge()
+
                 // Increment dodged count
                 val newDodgeCount = gameState.obstaclesDodged + 1
                 gameState = gameState.copy(obstaclesDodged = newDodgeCount)
@@ -197,17 +210,45 @@ class GameViewModel: ViewModel() {
         // Check each obstacle for collision
         obstacles.forEach { obstacle ->
             if (CollisionDetector.checkCollision(playerX, playerY, obstacle, screenWidth)) {
+
+                // Explosion sound
+                soundManager?.playExplosion()
+                onExplosion?.invoke(playerX, playerY)
+
                 triggerGameOver()
                 return
             }
         }
     }
 
+    /*
+    // Load high score on init
+    init {
+        viewModelScope.launch {
+            preferencesManager?.highScore?.collect { savedHighScore ->
+                if (savedHighScore > sessionHighScore) {
+                    sessionHighScore = savedHighScore
+                    gameState = gameState.copy(highScore = savedHighScore)
+                }
+            }
+        }
+    }
+    */
+
     private fun triggerGameOver() {
         // Update high score if current is higher
         if (gameState.score > sessionHighScore) {
             sessionHighScore = gameState.score
         }
+
+       gameState = gameState.copy(
+            isPlaying = false,
+            isGameOver = true,
+            highScore = sessionHighScore
+        )
+
+        // Stop music
+        soundManager?.pauseMusic()
 
         gameState = gameState.copy(
             isPlaying = false,
@@ -266,6 +307,7 @@ class GameViewModel: ViewModel() {
 
     override fun onCleared() {
         super.onCleared()
+        soundManager?.release()
         gameLoopJob?.cancel()
         spawnJob?.cancel()
         scoreJob?.cancel()

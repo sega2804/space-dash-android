@@ -37,12 +37,14 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.crypticsamsara.spacedash.ui.theme.DangerRed
 import com.crypticsamsara.spacedash.ui.theme.NeonCyan
 import com.crypticsamsara.spacedash.ui.theme.NeonPurple
 import com.crypticsamsara.spacedash.ui.theme.SpaceBlack
 import com.crypticsamsara.spacedash.ui.theme.SpaceBlue
 import com.crypticsamsara.spacedash.ui.theme.StarWhite
+import com.crypticsamsara.spacedash.viewmodel.GameViewModel
 
 @Composable
 fun GameOverScreen(
@@ -51,7 +53,8 @@ fun GameOverScreen(
     obstacleDodges: Int,
     highScore: Int,
     onRestart: () -> Unit,
-    onHome: () -> Unit = {}
+    onHome: () -> Unit = {},
+    viewModel: GameViewModel = viewModel()
 ) {
     // Pulsing animation for "Game Over"
     val infiniteTransition = rememberInfiniteTransition(label = "pulse")
@@ -175,7 +178,10 @@ fun GameOverScreen(
             ) {
                 // Restart button
                 Button(
-                    onClick = onRestart,
+                    onClick = {
+                        viewModel.soundManager?.playClick()
+                        onRestart()
+                    },
                     colors = ButtonDefaults.buttonColors(
                         containerColor = NeonCyan
                     ),

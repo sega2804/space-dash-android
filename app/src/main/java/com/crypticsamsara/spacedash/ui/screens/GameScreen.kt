@@ -27,6 +27,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
@@ -36,7 +37,9 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.crypticsamsara.spacedash.model.StarFactory
 import com.crypticsamsara.spacedash.ui.components.ObstacleRenderer.drawObstacle
+import com.crypticsamsara.spacedash.ui.components.ParticleSystem
 import com.crypticsamsara.spacedash.ui.components.PlayerRenderer
 import com.crypticsamsara.spacedash.ui.components.PlayerRenderer.drawPlayer
 import com.crypticsamsara.spacedash.ui.theme.DangerRed
@@ -45,6 +48,7 @@ import com.crypticsamsara.spacedash.ui.theme.NeonPurple
 import com.crypticsamsara.spacedash.ui.theme.SpaceBlack
 import com.crypticsamsara.spacedash.ui.theme.StarWhite
 import com.crypticsamsara.spacedash.viewmodel.GameViewModel
+import kotlinx.coroutines.delay
 import java.nio.file.Files.size
 import kotlin.random.Random
 
@@ -55,10 +59,33 @@ fun GameScreen (
     val gameState = viewModel.gameState
     val obstacles = viewModel.obstacles
     val stars = viewModel.stars
+    val particleSystem = remember { ParticleSystem() }
 
     // For testing to start game automatically
     LaunchedEffect(Unit) {
-        viewModel.startGame()
+        if (!gameState.isPlaying && !gameState.isGameOver) {
+            viewModel.startGame()
+        }
+    }
+
+    // Logging purposes
+    LaunchedEffect(gameState.isPlaying, gameState.isGameOver) {
+        println("isPlaying: ${gameState.isPlaying}, isGameOver: ${gameState.isGameOver}")
+    }
+
+    // Setting up explosion
+    LaunchedEffect(Unit) {
+        viewModel.onExplosion = { x, y ->
+            particleSystem.createExplosion(x, y, particleCount = 30)
+        }
+    }
+
+    // UPDATE MOVING STARS
+    LaunchedEffect(gameState.isPlaying) {
+        while (gameState.isPlaying) {
+            StarFactory.updateStars(stars, viewModel.screenHeight)
+            delay(16L) // 60 FPS
+        }
     }
 
     Box(
@@ -99,145 +126,157 @@ fun GameScreen (
 
                 drawPlayer(playerX, playerY)
             }
+
+            // UPDATE AND DRAW PARTICLES
+            particleSystem.update()
+            with(particleSystem) {
+                drawParticles()
+            }
         }
 
         // Score Display
-        if (gameState.isPlaying || gameState.isGameOver) {
-          /*
-            Column(
-                modifier = Modifier
-                    .align(Alignment.TopCenter)
-                    .padding(top = 32.dp),
-                horizontalAlignment = Alignment.CenterHorizontally
-            ) {
+        if (gameState.isPlaying && !gameState.isGameOver) {
+           Column(
+               modifier = Modifier
+                   .align(Alignment.TopCenter)
+                   .padding(top = 32.dp),
+               horizontalAlignment = Alignment.CenterHorizontally
+           ) {
 
-                // Main Score
-                Text(
-                    text = "Score: ${gameState.score}",
-                    color = NeonCyan,
-                    fontSize = 48.sp,
-                    fontWeight = FontWeight.Bold
-                )
+               // Main Score
+               Text(
+                   text = "Score: ${gameState.score}",
+                   color = NeonCyan,
+                   fontSize = 48.sp,
+                   fontWeight = FontWeight.Bold
+               )
 
-                // Stats row
-                Row(
-                    horizontalArrangement = Arrangement.spacedBy(24.dp),
-                    modifier = Modifier.padding(top = 8.dp)
-                ) {
-                    // Time survived
-                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        Text(
-                            text = viewModel.getFormattedSurvivalTime(),
-                            color = StarWhite,
-                            fontSize = 16.sp,
-                            fontWeight = FontWeight.Bold
-                        )
-                        Text(
-                            text = "TIME",
-                            color = StarWhite.copy(alpha = 0.6f),
-                            fontSize = 10.sp
-                        )
-                    }
+               // Stats row
+               Row(
+                   horizontalArrangement = Arrangement.spacedBy(24.dp),
+                   modifier = Modifier.padding(top = 8.dp)
+               ) {
+                   // Time survived
+                   Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                       Text(
+                           text = viewModel.getFormattedSurvivalTime(),
+                           color = StarWhite,
+                           fontSize = 16.sp,
+                           fontWeight = FontWeight.Bold
+                       )
+                       Text(
+                           text = "TIME",
+                           color = StarWhite.copy(alpha = 0.6f),
+                           fontSize = 10.sp
+                       )
+                   }
 
-                    // Obstacles dodged
-                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        Text(
-                            text = "${gameState.obstaclesDodged}",
-                            color = NeonPurple,
-                            fontSize = 16.sp,
-                            fontWeight = FontWeight.Bold
-                        )
-                        Text(
-                            text = "DODGED",
-                            color = StarWhite.copy(alpha = 0.6f),
-                            fontSize = 10.sp
-                        )
-                    }
-                }
-            }
+                   // Obstacles dodged
+                   Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                       Text(
+                           text = "${gameState.obstaclesDodged}",
+                           color = NeonPurple,
+                           fontSize = 16.sp,
+                           fontWeight = FontWeight.Bold
+                       )
+                       Text(
+                           text = "DODGED",
+                           color = StarWhite.copy(alpha = 0.6f),
+                           fontSize = 10.sp
+                       )
+                   }
+               }
+           }
+       }
+/*
+       // Game Over Overlay
+       if (gameState.isGameOver) { // To make it visible only during gameplay
+           Box(
+               modifier = Modifier
+                   .fillMaxSize()
+                   .background(Color.Black.copy(alpha = 0.7f)),
+               contentAlignment = Alignment.Center
+           ) {
+               Column(
+                   horizontalAlignment = Alignment.CenterHorizontally,
+                   verticalArrangement = Arrangement.Center
+               ) {
+                   Text(
+                       text = "GAME OVER",
+                       color = DangerRed,
+                       fontSize = 48.sp,
+                       fontWeight = FontWeight.Bold
+                   )
+
+                   Spacer(modifier = Modifier.height(32.dp))
+
+
+                   // Stats summary
+                   Row(
+                       horizontalArrangement = Arrangement.spacedBy(32.dp)
+                   ) {
+
+                       Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                           Text(
+                               text = viewModel.getFormattedSurvivalTime(),
+                               color = StarWhite,
+                               fontSize = 24.sp,
+                               fontWeight = FontWeight.Bold
+                           )
+                           Text(
+                               text = "Survival Time",
+                               color = StarWhite.copy(alpha = 0.6f),
+                               fontSize = 14.sp
+                           )
+                       }
+
+                       Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                           Text(
+                               text = "${gameState.obstaclesDodged}",
+                               color = NeonPurple,
+                               fontSize = 24.sp,
+                               fontWeight = FontWeight.Bold
+                           )
+                           Text(
+                               text = "Obstacles Dodged",
+                               color = StarWhite.copy(alpha = 0.6f),
+                               fontSize = 14.sp
+                           )
+                       }
+                   }
+
+                   Spacer(modifier = Modifier.height(40.dp))
+
+                   Button(
+                       onClick = { viewModel.restartGame() },
+                       colors = ButtonDefaults.buttonColors(
+                           containerColor = NeonCyan
+                       ),
+                       modifier = Modifier.size(width = 200.dp, height = 60.dp)
+                   ) {
+                       Text(
+                           text = "RESTART",
+                           fontSize = 20.sp,
+                           fontWeight = FontWeight.Bold,
+                           color = SpaceBlack
+                       )
+                   }
+               }
+          }
         }
+ */
 
-        // Game Over Overlay
-        if (gameState.isGameOver) { // To make it visible only during gameplay
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .background(Color.Black.copy(alpha = 0.7f)),
-                contentAlignment = Alignment.Center
-            ) {
-                Column(
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.Center
-                ) {
-                    Text(
-                        text = "GAME OVER",
-                        color = DangerRed,
-                        fontSize = 48.sp,
-                        fontWeight = FontWeight.Bold
-                    )
+        // GameOverScreen
+        if (!gameState.isPlaying && gameState.isGameOver) {
 
-                    Spacer(modifier = Modifier.height(32.dp))
-
-
-                    // Stats summary
-                    Row(
-                        horizontalArrangement = Arrangement.spacedBy(32.dp)
-                    ) {
-
-                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                            Text(
-                                text = viewModel.getFormattedSurvivalTime(),
-                                color = StarWhite,
-                                fontSize = 24.sp,
-                                fontWeight = FontWeight.Bold
-                            )
-                            Text(
-                                text = "Survival Time",
-                                color = StarWhite.copy(alpha = 0.6f),
-                                fontSize = 14.sp
-                            )
-                        }
-
-                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                            Text(
-                                text = "${gameState.obstaclesDodged}",
-                                color = NeonPurple,
-                                fontSize = 24.sp,
-                                fontWeight = FontWeight.Bold
-                            )
-                            Text(
-                                text = "Obstacles Dodged",
-                                color = StarWhite.copy(alpha = 0.6f),
-                                fontSize = 14.sp
-                            )
-                        }
-                    }
-
-                    Spacer(modifier = Modifier.height(40.dp))
-
-                    Button(
-                        onClick = { viewModel.restartGame() },
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = NeonCyan
-                        ),
-                        modifier = Modifier.size(width = 200.dp, height = 60.dp)
-                    ) {
-                        Text(
-                            text = "RESTART",
-                            fontSize = 20.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = SpaceBlack
-                        )
-                    }
-                }
-            }
-*/
             GameOverScreen(
                 score = gameState.score,
                 survivalTime = viewModel.getFormattedSurvivalTime(),
                 obstacleDodges = gameState.obstaclesDodged,
                 highScore = gameState.highScore,
-                onRestart = { viewModel.restartGame()}
+                onRestart = {
+                    particleSystem.clear() // Clear particles on restart
+                    viewModel.restartGame()}
             )
         }
 
@@ -251,7 +290,9 @@ fun GameScreen (
             ) {
                 // Left button
                 Button(
-                    onClick = { viewModel.movePlayerLeft() },
+                    onClick = {
+                        viewModel.soundManager?.playClick()
+                        viewModel.movePlayerLeft() },
                     modifier = Modifier.size(80.dp),
                     colors = ButtonDefaults.buttonColors(
                         containerColor = NeonCyan.copy(alpha = 0.3f)
@@ -267,7 +308,9 @@ fun GameScreen (
 
                 // Right button
                 Button(
-                    onClick = { viewModel.movePlayerRight() },
+                    onClick = {
+                        viewModel.soundManager?.playClick()
+                        viewModel.movePlayerRight() },
                     modifier = Modifier.size(80.dp),
                     colors = ButtonDefaults.buttonColors(
                         containerColor = NeonCyan.copy(alpha = 0.3f)

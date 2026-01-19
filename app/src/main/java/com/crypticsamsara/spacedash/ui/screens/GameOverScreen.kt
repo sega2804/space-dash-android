@@ -53,9 +53,8 @@ fun GameOverScreen(
     obstacleDodges: Int,
     highScore: Int,
     onRestart: () -> Unit,
-    onHome: (() -> Unit)? = null,
-    onButtonClick: () -> Unit = {}
-   // viewModel: GameViewModel = viewModel()
+    onHome: () -> Unit = {},
+    viewModel: GameViewModel = viewModel()
 ) {
     // Pulsing animation for "Game Over"
     val infiniteTransition = rememberInfiniteTransition(label = "pulse")
@@ -180,7 +179,7 @@ fun GameOverScreen(
                 // Restart button
                 Button(
                     onClick = {
-                        onButtonClick()
+                        viewModel.soundManager?.playClick()
                         onRestart()
                     },
                     colors = ButtonDefaults.buttonColors(

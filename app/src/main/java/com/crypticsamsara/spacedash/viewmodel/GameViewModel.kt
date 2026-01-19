@@ -14,7 +14,6 @@ import com.crypticsamsara.spacedash.model.Star
 import com.crypticsamsara.spacedash.model.StarFactory
 import com.crypticsamsara.spacedash.ui.audio.SoundManager
 import com.crypticsamsara.spacedash.ui.components.PlayerRenderer
-import com.crypticsamsara.spacedash.ui.haptics.HapticManager
 import com.crypticsamsara.spacedash.utils.CollisionDetector
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
@@ -28,14 +27,10 @@ data class GameState(
     val isGameOver: Boolean = false,
     val survivalTime: Long = 0L,
     val obstaclesDodged: Int = 0,
-    val highScore: Int = 0,
-    val isPaused: Boolean = false,
-    val currentCombo: Int = 0,
-    val maxComboReached: Int = 0
+    val highScore: Int = 0
 )
 class GameViewModel(
-     val soundManager: SoundManager? = null,
-    val hapticManager: HapticManager? = null
+     val soundManager: SoundManager? = null
 ): ViewModel() {
     var gameState by mutableStateOf(GameState())
     private set
@@ -105,33 +100,6 @@ class GameViewModel(
         startScoreTimer()
     }
 
-    fun pauseGame() {
-        if (!gameState.isPlaying || gameState.isGameOver || gameState.isPaused)
-
-            gameState = gameState.copy(isPaused = true)
-
-        // To pause music
-        soundManager?.pauseMusic()
-    }
-
-    fun resumeGame() {
-        if (!gameState.isPlaying || gameState.isGameOver || gameState.isPaused)
-
-            gameState = gameState.copy(isPaused = true)
-
-        // Resume music
-        soundManager?.resumeMusic()
-    }
-
-    fun restartFromPause() {
-        // unpause first
-        gameState = gameState.copy(isPaused = false)
-        // then restart
-        restartGame()
-    }
-
-
-
     private fun startGameLoop() {
         gameLoopJob?.cancel()
         gameLoopJob = viewModelScope.launch {
@@ -146,14 +114,8 @@ class GameViewModel(
         spawnJob?.cancel()
         spawnJob = viewModelScope.launch {
             while (isActive && gameState.isPlaying) {
-                // spawn if not paused
-                if (!gameState.isPaused) {
-                    spawnObstacles()
-                    delay((1000L..2500L).random()) // spawn every 1-2.5 seconds
-                } else {
-                    delay(100L) // pause for 0.1 second
-
-                }
+                spawnObstacles()
+                delay((1000L..2500L).random()) // spawn every 1-2.5 seconds
             }
         }
     }
@@ -161,28 +123,11 @@ class GameViewModel(
     private fun startScoreTimer() {
         scoreJob?.cancel()
         val startTime = System.currentTimeMillis()
-        var pauseStateTime: Long = 0
-        var totalPausedTime: Long = 0
-
 
         scoreJob = viewModelScope.launch {
             while (isActive && gameState.isPlaying) {
-                // handle pause state
-                if (gameState.isPaused) {
-                    if (pauseStateTime == 0L) {
-                    pauseStateTime = System.currentTimeMillis()
-                }
-                delay(100L)
-                continue
-            } else {
-                if (pauseStateTime != 0L) {
-                    totalPausedTime += System.currentTimeMillis() - pauseStateTime
-                    pauseStateTime = 0L
-            }
-        }
-
                 val currentTime = System.currentTimeMillis()
-                val survivalTime = currentTime - startTime - totalPausedTime
+                val survivalTime = currentTime - startTime
 
                 // Update survival time
                 gameState = gameState.copy(survivalTime = survivalTime)
@@ -232,8 +177,6 @@ class GameViewModel(
 
                 // Dodge sound
                 soundManager?.playDodge()
-                // Vibration
-                hapticManager?.mediumVibration()
 
                 // Increment dodged count
                 val newDodgeCount = gameState.obstaclesDodged + 1
@@ -268,14 +211,26 @@ class GameViewModel(
                 // Explosion sound
                 soundManager?.playExplosion()
                 onExplosion?.invoke(playerX, playerY)
-                // Vibration - strong
-                hapticManager?.strongVibration()
+
                 triggerGameOver()
                 return
             }
         }
     }
 
+    /*
+    // Load high score on init
+    init {
+        viewModelScope.launch {
+            preferencesManager?.highScore?.collect { savedHighScore ->
+                if (savedHighScore > sessionHighScore) {
+                    sessionHighScore = savedHighScore
+                    gameState = gameState.copy(highScore = savedHighScore)
+                }
+            }
+        }
+    }
+    */
 
     private fun triggerGameOver() {
         // Update high score if current is higher
@@ -345,19 +300,6 @@ class GameViewModel(
         val minutes = seconds / 60
         val remainingSeconds = seconds % 60
         return String.format("%02d:%02d", minutes, remainingSeconds)
-    }
-
-    fun onButtonClick() {
-        soundManager?.playClick()
-        hapticManager?.lightTap()
-    }
-
-    fun toggleHaptics(enabled: Boolean) {
-        hapticManager?.isHapticEnabled = enabled
-    }
-
-    fun isHapticsEnabled(): Boolean {
-        return hapticManager?.isHapticEnabled ?: false
     }
 
     override fun onCleared() {

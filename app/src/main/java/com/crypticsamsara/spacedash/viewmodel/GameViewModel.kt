@@ -14,6 +14,7 @@ import com.crypticsamsara.spacedash.model.Star
 import com.crypticsamsara.spacedash.model.StarFactory
 import com.crypticsamsara.spacedash.ui.audio.SoundManager
 import com.crypticsamsara.spacedash.ui.components.PlayerRenderer
+import com.crypticsamsara.spacedash.ui.haptics.HapticManager
 import com.crypticsamsara.spacedash.utils.CollisionDetector
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
@@ -30,7 +31,8 @@ data class GameState(
     val highScore: Int = 0
 )
 class GameViewModel(
-     val soundManager: SoundManager? = null
+     val soundManager: SoundManager? = null,
+    val hapticManager: HapticManager? = null
 ): ViewModel() {
     var gameState by mutableStateOf(GameState())
     private set
@@ -177,6 +179,8 @@ class GameViewModel(
 
                 // Dodge sound
                 soundManager?.playDodge()
+                // Vibration
+                hapticManager?.mediumVibration()
 
                 // Increment dodged count
                 val newDodgeCount = gameState.obstaclesDodged + 1
@@ -211,26 +215,14 @@ class GameViewModel(
                 // Explosion sound
                 soundManager?.playExplosion()
                 onExplosion?.invoke(playerX, playerY)
-
+                // Vibration - strong
+                hapticManager?.strongVibration()
                 triggerGameOver()
                 return
             }
         }
     }
 
-    /*
-    // Load high score on init
-    init {
-        viewModelScope.launch {
-            preferencesManager?.highScore?.collect { savedHighScore ->
-                if (savedHighScore > sessionHighScore) {
-                    sessionHighScore = savedHighScore
-                    gameState = gameState.copy(highScore = savedHighScore)
-                }
-            }
-        }
-    }
-    */
 
     private fun triggerGameOver() {
         // Update high score if current is higher
@@ -300,6 +292,11 @@ class GameViewModel(
         val minutes = seconds / 60
         val remainingSeconds = seconds % 60
         return String.format("%02d:%02d", minutes, remainingSeconds)
+    }
+
+    fun onButtonClick() {
+        soundManager?.playClick()
+        hapticManager?.lightTap()
     }
 
     override fun onCleared() {

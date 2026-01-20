@@ -20,6 +20,7 @@ import com.crypticsamsara.spacedash.ui.screens.GameNavigation
 import com.crypticsamsara.spacedash.ui.screens.GameScreen
 import com.crypticsamsara.spacedash.ui.theme.SpaceDashTheme
 import com.crypticsamsara.spacedash.viewmodel.GameViewModel
+import com.crypticsamsara.spacedash.viewmodel.GameViewModelFactory
 
 class MainActivity : ComponentActivity() {
 

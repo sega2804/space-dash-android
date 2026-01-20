@@ -292,6 +292,7 @@ fun GameScreen (
                 Button(
                     onClick = {
                         viewModel.soundManager?.playClick()
+                        viewModel.hapticManager?.lightTap()
                         viewModel.movePlayerLeft() },
                     modifier = Modifier.size(80.dp),
                     colors = ButtonDefaults.buttonColors(
@@ -310,6 +311,7 @@ fun GameScreen (
                 Button(
                     onClick = {
                         viewModel.soundManager?.playClick()
+                        viewModel.hapticManager?.lightTap()
                         viewModel.movePlayerRight() },
                     modifier = Modifier.size(80.dp),
                     colors = ButtonDefaults.buttonColors(

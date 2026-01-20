@@ -16,6 +16,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.crypticsamsara.spacedash.ui.audio.SoundManager
+import com.crypticsamsara.spacedash.ui.haptics.HapticManager
 import com.crypticsamsara.spacedash.ui.screens.GameNavigation
 import com.crypticsamsara.spacedash.ui.screens.GameScreen
 import com.crypticsamsara.spacedash.ui.theme.SpaceDashTheme
@@ -25,13 +26,15 @@ import com.crypticsamsara.spacedash.viewmodel.GameViewModelFactory
 class MainActivity : ComponentActivity() {
 
     private lateinit var soundManager: SoundManager
+    private lateinit var hapticManager: HapticManager
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
 
         // Start soundManager
-        soundManager = SoundManager(this)
+        soundManager = SoundManager(this),
+        hapticManager = HapticManager(this)
 
         setContent {
             SpaceDashTheme {
@@ -41,7 +44,7 @@ class MainActivity : ComponentActivity() {
                 ) {
                     // create viewmodel with soundManager
                     val viewModel: GameViewModel = viewModel(
-                        factory = GameViewModelFactory(soundManager)
+                        factory = GameViewModelFactory(soundManager, hapticManager)
                     )
                     GameScreen(viewModel = viewModel)
                 }
@@ -61,6 +64,7 @@ class MainActivity : ComponentActivity() {
     override fun onDestroy() {
         super.onDestroy()
         soundManager.release()
+        hapticManager.cancel()
     }
 }
 

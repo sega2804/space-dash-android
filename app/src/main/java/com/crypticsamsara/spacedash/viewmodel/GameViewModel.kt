@@ -299,6 +299,14 @@ class GameViewModel(
         hapticManager?.lightTap()
     }
 
+    fun toggleHaptics(enabled: Boolean) {
+        hapticManager?.isHapticEnabled = enabled
+    }
+
+    fun isHapticsEnabled(): Boolean {
+        return hapticManager?.isHapticEnabled ?: false
+    }
+
     override fun onCleared() {
         super.onCleared()
         soundManager?.release()

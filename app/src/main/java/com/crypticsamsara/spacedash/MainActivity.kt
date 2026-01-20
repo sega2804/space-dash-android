@@ -33,7 +33,7 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
 
         // Start soundManager
-        soundManager = SoundManager(this),
+        soundManager = SoundManager(this)
         hapticManager = HapticManager(this)
 
         setContent {

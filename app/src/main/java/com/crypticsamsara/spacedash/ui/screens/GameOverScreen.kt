@@ -53,7 +53,7 @@ fun GameOverScreen(
     obstacleDodges: Int,
     highScore: Int,
     onRestart: () -> Unit,
-    onHome: () -> Unit = {},
+    onHome: (() -> Unit)? = null,
     onButtonClick: () -> Unit = {}
    // viewModel: GameViewModel = viewModel()
 ) {

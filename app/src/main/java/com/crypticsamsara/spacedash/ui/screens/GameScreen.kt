@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -19,9 +20,11 @@ import androidx.compose.material.icons.automirrored.filled.KeyboardArrowLeft
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.KeyboardArrowLeft
 import androidx.compose.material.icons.filled.KeyboardArrowRight
+import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -54,13 +57,16 @@ import kotlin.random.Random
 
 @Composable
 fun GameScreen (
-    viewModel: GameViewModel = viewModel()
+    viewModel: GameViewModel = viewModel(),
+    onBackToHome: (() -> Unit)? = null
 ) {
     val gameState = viewModel.gameState
     val obstacles = viewModel.obstacles
     val stars = viewModel.stars
+
     val particleSystem = remember { ParticleSystem() }
 
+    /*
     // For testing to start game automatically
     LaunchedEffect(Unit) {
         if (!gameState.isPlaying && !gameState.isGameOver) {
@@ -72,6 +78,7 @@ fun GameScreen (
     LaunchedEffect(gameState.isPlaying, gameState.isGameOver) {
         println("isPlaying: ${gameState.isPlaying}, isGameOver: ${gameState.isGameOver}")
     }
+     */
 
     // Setting up explosion
     LaunchedEffect(Unit) {
@@ -135,7 +142,7 @@ fun GameScreen (
         }
 
         // Score Display
-        if (gameState.isPlaying && !gameState.isGameOver) {
+        if (gameState.isPlaying && !gameState.isGameOver && !gameState.isPaused) {
            Column(
                modifier = Modifier
                    .align(Alignment.TopCenter)
@@ -266,6 +273,39 @@ fun GameScreen (
         }
  */
 
+        // Pause button
+        if (gameState.isPlaying && !gameState.isGameOver && !gameState.isPaused) {
+            IconButton(
+                onClick = {
+                    viewModel.onButtonClick()
+                    viewModel.pauseGame()
+                },
+                modifier = Modifier
+                    .align(Alignment.TopEnd)
+                    .padding(16.dp)
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Pause,
+                    contentDescription = "Pause",
+                    tint = NeonCyan,
+                    modifier = Modifier.size(32.dp)
+                )
+            }
+        }
+
+        // Pause menu overlay
+        if (gameState.isPaused){
+            PauseMenuOverlay(
+                onResume = { viewModel.resumeGame() },
+                onRestart = { viewModel.restartFromPause() },
+                onMainMenu = {
+                    viewModel.stopGame()
+                    onBackToHome?.invoke()
+                             },
+                onButtonClick = { viewModel.onButtonClick() }
+            )
+        }
+
         // GameOverScreen
         if (!gameState.isPlaying && gameState.isGameOver) {
 
@@ -276,15 +316,18 @@ fun GameScreen (
                 highScore = gameState.highScore,
                 onRestart = {
                     particleSystem.clear() // Clear particles on restart
-                    viewModel.restartGame()},
-                onButtonClick = { viewModel.onButtonClick()}
+                    viewModel.restartGame()
+                            },
+                onButtonClick = { viewModel.onButtonClick()},
+                onHome = onBackToHome
             )
         }
 
         // Control buttons at bottom
-        if (gameState.isPlaying && !gameState.isGameOver) {
+        if (gameState.isPlaying && !gameState.isGameOver && !gameState.isPaused) {
             Row(
                 modifier = Modifier
+                    .fillMaxWidth()
                     .align(Alignment.BottomCenter)
                     .padding(bottom = 40.dp),
                 horizontalArrangement = Arrangement.SpaceEvenly

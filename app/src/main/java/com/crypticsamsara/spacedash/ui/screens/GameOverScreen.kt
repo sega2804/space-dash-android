@@ -44,6 +44,7 @@ import com.crypticsamsara.spacedash.ui.theme.NeonPurple
 import com.crypticsamsara.spacedash.ui.theme.SpaceBlack
 import com.crypticsamsara.spacedash.ui.theme.SpaceBlue
 import com.crypticsamsara.spacedash.ui.theme.StarWhite
+import com.crypticsamsara.spacedash.viewmodel.GameViewModel
 
 @Composable
 fun GameOverScreen(
@@ -52,7 +53,9 @@ fun GameOverScreen(
     obstacleDodges: Int,
     highScore: Int,
     onRestart: () -> Unit,
-    onHome: () -> Unit = {}
+    onHome: (() -> Unit)? = null,
+    onButtonClick: () -> Unit = {}
+   // viewModel: GameViewModel = viewModel()
 ) {
     // Pulsing animation for "Game Over"
     val infiniteTransition = rememberInfiniteTransition(label = "pulse")
@@ -176,7 +179,10 @@ fun GameOverScreen(
             ) {
                 // Restart button
                 Button(
-                    onClick = onRestart,
+                    onClick = {
+                        onButtonClick()
+                        onRestart()
+                    },
                     colors = ButtonDefaults.buttonColors(
                         containerColor = NeonCyan
                     ),

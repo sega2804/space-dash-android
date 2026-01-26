@@ -105,6 +105,33 @@ class GameViewModel(
         startScoreTimer()
     }
 
+    fun pauseGame() {
+        if (!gameState.isPlaying || gameState.isGameOver || gameState.isPaused)
+
+            gameState = gameState.copy(isPaused = true)
+
+        // To pause music
+        soundManager?.pauseMusic()
+    }
+
+    fun resumeGame() {
+        if (!gameState.isPlaying || gameState.isGameOver || gameState.isPaused)
+
+            gameState = gameState.copy(isPaused = true)
+
+        // Resume music
+        soundManager?.resumeMusic()
+    }
+
+    fun restartFromPause() {
+        // unpause first
+        gameState = gameState.copy(isPaused = false)
+        // then restart
+        restartGame()
+    }
+
+
+
     private fun startGameLoop() {
         gameLoopJob?.cancel()
         gameLoopJob = viewModelScope.launch {
@@ -119,8 +146,14 @@ class GameViewModel(
         spawnJob?.cancel()
         spawnJob = viewModelScope.launch {
             while (isActive && gameState.isPlaying) {
-                spawnObstacles()
-                delay((1000L..2500L).random()) // spawn every 1-2.5 seconds
+                // spawn if not paused
+                if (!gameState.isPaused) {
+                    spawnObstacles()
+                    delay((1000L..2500L).random()) // spawn every 1-2.5 seconds
+                } else {
+                    delay(100L) // pause for 0.1 second
+
+                }
             }
         }
     }
@@ -128,11 +161,28 @@ class GameViewModel(
     private fun startScoreTimer() {
         scoreJob?.cancel()
         val startTime = System.currentTimeMillis()
+        var pauseStateTime: Long = 0
+        var totalPausedTime: Long = 0
+
 
         scoreJob = viewModelScope.launch {
             while (isActive && gameState.isPlaying) {
+                // handle pause state
+                if (gameState.isPaused) {
+                    if (pauseStateTime == 0L) {
+                    pauseStateTime = System.currentTimeMillis()
+                }
+                delay(100L)
+                continue
+            } else {
+                if (pauseStateTime != 0L) {
+                    totalPausedTime += System.currentTimeMillis() - pauseStateTime
+                    pauseStateTime = 0L
+            }
+        }
+
                 val currentTime = System.currentTimeMillis()
-                val survivalTime = currentTime - startTime
+                val survivalTime = currentTime - startTime - totalPausedTime
 
                 // Update survival time
                 gameState = gameState.copy(survivalTime = survivalTime)

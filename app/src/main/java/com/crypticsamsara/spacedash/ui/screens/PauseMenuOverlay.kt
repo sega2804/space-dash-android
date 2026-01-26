@@ -1,12 +1,6 @@
 package com.crypticsamsara.spacedash.ui.screens
 
 import android.view.RoundedCorner
-import androidx.compose.animation.core.LinearEasing
-import androidx.compose.animation.core.RepeatMode
-import androidx.compose.animation.core.animateFloat
-import androidx.compose.animation.core.infiniteRepeatable
-import androidx.compose.animation.core.rememberInfiniteTransition
-import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -46,18 +40,6 @@ fun PauseMenuOverlay(
     onMainMenu: () -> Unit,
     onButtonClick: () -> Unit = {}
 ) {
-    // Pulsing animation
-    val infiniteTransition = rememberInfiniteTransition(label = "pulse")
-    val alpha = infiniteTransition.animateFloat(
-    initialValue = 0.6f,
-        targetValue = 1f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(1000, easing = LinearEasing),
-            repeatMode = RepeatMode.Reverse
-        ),
-        label = "alpha"
-    )
-
     Box(
         modifier = Modifier
             .fillMaxSize()

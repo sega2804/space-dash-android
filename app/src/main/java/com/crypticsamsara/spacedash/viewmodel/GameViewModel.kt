@@ -29,7 +29,9 @@ data class GameState(
     val survivalTime: Long = 0L,
     val obstaclesDodged: Int = 0,
     val highScore: Int = 0,
-    val isPaused: Boolean = false
+    val isPaused: Boolean = false,
+    val currentCombo: Int = 0,
+    val maxComboReached: Int = 0
 )
 class GameViewModel(
      val soundManager: SoundManager? = null,

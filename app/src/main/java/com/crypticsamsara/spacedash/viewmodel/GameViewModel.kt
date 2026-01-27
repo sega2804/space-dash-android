@@ -67,7 +67,6 @@ class GameViewModel(
 
     var onExplosion: ((Float, Float) -> Unit)? = null
 
-    var onComboMilestone: ((Int) -> Unit)? = null
 
     // Scoring constraints
     private companion object {
@@ -240,15 +239,6 @@ class GameViewModel(
                 val newCombo = gameState.currentCombo + 1
                 val newMaxCombo = maxOf(newCombo, gameState.maxComboReached)
 
-                // Check for milestones
-                if (newCombo in listOf(5, 10, 25, 50, 100)) {
-                    onComboMilestone?.invoke(newCombo)
-                    // haptic addition for milestone
-                    hapticManager?.successVibration()
-                } else {
-                    hapticManager?.mediumVibration()
-                }
-
                 // combo bonus calculation
                 val comboBonus = newCombo * COMBO_MULTIPLIER
 
@@ -403,6 +393,14 @@ class GameViewModel(
     fun onButtonClick() {
         soundManager?.playClick()
         hapticManager?.lightTap()
+    }
+
+    fun toggleHaptics(enabled: Boolean) {
+        hapticManager?.isHapticEnabled = enabled
+    }
+
+    fun isHapticsEnabled(): Boolean {
+        return hapticManager?.isHapticEnabled ?: false
     }
 
     override fun onCleared() {

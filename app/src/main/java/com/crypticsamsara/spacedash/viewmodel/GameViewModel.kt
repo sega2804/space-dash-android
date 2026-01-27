@@ -73,6 +73,7 @@ class GameViewModel(
         const val POINTS_PER_SECOND = 10
         const val POINTS_PER_DODGE = 50
         const val NEAR_MISS_BONUS = 25
+        const val COMBO_MULTIPLIER = 10
     }
 
 
@@ -94,12 +95,16 @@ class GameViewModel(
             isGameOver = false,
             survivalTime = 0L,
             obstaclesDodged = 0,
-            highScore = sessionHighScore
+            highScore = sessionHighScore,
+            currentCombo = 0,
+            maxComboReached = 0
         )
+
         obstacles.clear()
         dodgedObstacleIds.clear()
 
         soundManager?.startMusic()
+
         startGameLoop()
         startObstacleSpawner()
         startScoreTimer()
@@ -230,6 +235,13 @@ class GameViewModel(
 
                 dodgedObstacleIds.add(obstacle.id)
 
+                // combo system
+                val newCombo = gameState.currentCombo + 1
+                val newMaxCombo = maxOf(newCombo, gameState.maxComboReached)
+
+                // combo bonus calculation
+                val comboBonus = newCombo * COMBO_MULTIPLIER
+
                 // Dodge sound
                 soundManager?.playDodge()
                 // Vibration
@@ -237,12 +249,19 @@ class GameViewModel(
 
                 // Increment dodged count
                 val newDodgeCount = gameState.obstaclesDodged + 1
-                gameState = gameState.copy(obstaclesDodged = newDodgeCount)
+                gameState = gameState.copy(
+                    obstaclesDodged = newDodgeCount,
+                    currentCombo = newCombo,
+                    maxComboReached = newMaxCombo
+                )
 
                 // Add dodge bonus to score
                 val dodgeBonus = POINTS_PER_DODGE * newDodgeCount
                 val timeScore = (gameState.survivalTime / 100).toInt()
-                gameState = gameState.copy(score = timeScore + dodgeBonus)
+                val totalComboBonus = (1..newCombo).sum() * COMBO_MULTIPLIER
+
+                gameState = gameState.copy(
+                    score = timeScore + dodgeBonus + totalComboBonus)
             }
         }
     }
@@ -265,6 +284,8 @@ class GameViewModel(
         obstacles.forEach { obstacle ->
             if (CollisionDetector.checkCollision(playerX, playerY, obstacle, screenWidth)) {
 
+                // Reset combo on collision
+                gameState = gameState.copy(currentCombo = 0)
                 // Explosion sound
                 soundManager?.playExplosion()
                 onExplosion?.invoke(playerX, playerY)
@@ -319,6 +340,28 @@ class GameViewModel(
 
     fun restartGame() {
         startGame()
+    }
+
+    // helper function for combo
+    fun getComboMultiplier(): Float {
+        return when (gameState.currentCombo) {
+            in 0..4 -> 1f
+            in 5..9 -> 1.5f
+            in 10..24 -> 2f
+            in 25..49 -> 2.5f
+            else -> 3f
+        }
+    }
+
+    fun getComboMessage(): String {
+        return when (gameState.currentCombo) {
+            0 -> ""
+            in 1..4 -> "${gameState.currentCombo}x"
+            in 5..9 -> "${gameState.currentCombo}x COMBO!"
+            in 10..24 -> "${gameState.currentCombo}x GREAT!"
+            in 25..49 -> "${gameState.currentCombo}x AMAZING!"
+            else -> "${gameState.currentCombo}x LEGENDARY!"
+        }
     }
 
     fun stopGame() {

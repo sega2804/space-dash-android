@@ -54,8 +54,8 @@ fun GameOverScreen(
     highScore: Int,
     onRestart: () -> Unit,
     onHome: (() -> Unit)? = null,
-    onButtonClick: () -> Unit = {}
-   // viewModel: GameViewModel = viewModel()
+    onButtonClick: () -> Unit = {},
+    maxCombo: Int = 0
 ) {
     // Pulsing animation for "Game Over"
     val infiniteTransition = rememberInfiniteTransition(label = "pulse")
@@ -159,6 +159,13 @@ fun GameOverScreen(
                             label = "DODGED",
                             value = "$obstacleDodges",
                             color = NeonPurple
+                        )
+
+                        // Max combo stat
+                        StatItem(
+                            label = "MAX COMBO",
+                            value = "${maxCombo}x",
+                            color = Color(0xFFFFD700)
                         )
 
                         // High score stat

@@ -30,7 +30,9 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
@@ -41,6 +43,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.crypticsamsara.spacedash.model.StarFactory
+import com.crypticsamsara.spacedash.ui.components.ComboDisplay
+import com.crypticsamsara.spacedash.ui.components.MilestonePopup
 import com.crypticsamsara.spacedash.ui.components.ObstacleRenderer.drawObstacle
 import com.crypticsamsara.spacedash.ui.components.ParticleSystem
 import com.crypticsamsara.spacedash.ui.components.PlayerRenderer
@@ -66,6 +70,8 @@ fun GameScreen (
 
     val particleSystem = remember { ParticleSystem() }
 
+    var currentMilestone by remember { mutableStateOf<Int?>(null) }
+
     /*
     // For testing to start game automatically
     LaunchedEffect(Unit) {
@@ -85,7 +91,14 @@ fun GameScreen (
         viewModel.onExplosion = { x, y ->
             particleSystem.createExplosion(x, y, particleCount = 30)
         }
+
+        // milestone callback
+        viewModel.onComboMilestone = {milestone ->
+            currentMilestone = milestone
+        }
     }
+
+
 
     // UPDATE MOVING STARS
     LaunchedEffect(gameState.isPlaying) {
@@ -141,6 +154,21 @@ fun GameScreen (
             }
         }
 
+        // Milestone popup
+        currentMilestone?.let { milestone ->
+            Box (
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .align(Alignment.Center)
+                    .padding(horizontal = 32.dp)
+            ) {
+                MilestonePopup(
+                    milestone = milestone,
+                    onDismiss = { currentMilestone = null }
+                )
+            }
+        }
+
         // Score Display
         if (gameState.isPlaying && !gameState.isGameOver && !gameState.isPaused) {
            Column(
@@ -156,6 +184,13 @@ fun GameScreen (
                    color = NeonCyan,
                    fontSize = 48.sp,
                    fontWeight = FontWeight.Bold
+               )
+
+               // Combo Display
+               ComboDisplay(
+                   combo = gameState.currentCombo,
+                   comboMessage = viewModel.getComboMessage(),
+                   modifier = Modifier.padding(top = 8.dp)
                )
 
                // Stats row
@@ -314,6 +349,7 @@ fun GameScreen (
                 survivalTime = viewModel.getFormattedSurvivalTime(),
                 obstacleDodges = gameState.obstaclesDodged,
                 highScore = gameState.highScore,
+                maxCombo = gameState.maxComboReached,
                 onRestart = {
                     particleSystem.clear() // Clear particles on restart
                     viewModel.restartGame()

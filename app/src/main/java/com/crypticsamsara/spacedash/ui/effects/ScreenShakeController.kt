@@ -37,6 +37,42 @@ class ScreenShakeController {
         shake(scope, duration = 500, intensity = 20f)
     }
 
+    fun directionalShake(
+        scope: CoroutineScope,
+        impactX: Float,
+        playerX: Float,
+        duration: Long = 500,
+        intensity: Float = 20f
+    ) {
+        if (isShaking) return
+        isShaking = true
+
+        // Calculate direction
+        val direction = if (impactX > playerX) -1f else 1f
+
+        scope.launch {
+            val startTime = System.currentTimeMillis()
+            val endTime = startTime + duration
+
+            while (isActive && System.currentTimeMillis() < endTime) {
+                val elapsed = System.currentTimeMillis() - startTime
+                val progress = elapsed.toFloat() / duration.toFloat()
+                val decay = 1f - progress
+
+                // shake primarily in horizontal direction
+                val x = direction * intensity * decay * (0.7f + Random.nextFloat() * 0.3f)
+                val y = (Random.nextFloat() - 0.5f) * intensity * decay * 0.5f
+
+                shakeOffset = Offset(x, y)
+
+                delay(16L)
+            }
+
+            shakeOffset = Offset.Zero
+            isShaking = false
+        }
+    }
+
     // Custom shake
     private fun shake (
         scope: CoroutineScope,

@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
@@ -67,8 +68,8 @@ fun GameScreen (
     val gameState = viewModel.gameState
     val obstacles = viewModel.obstacles
     val stars = viewModel.stars
-
     val particleSystem = remember { ParticleSystem() }
+    val shakeOffset = viewModel.screenShakeController.shakeOffset
 
     var currentMilestone by remember { mutableStateOf<Int?>(null) }
 
@@ -98,8 +99,6 @@ fun GameScreen (
         }
     }
 
-
-
     // UPDATE MOVING STARS
     LaunchedEffect(gameState.isPlaying) {
         while (gameState.isPlaying) {
@@ -112,6 +111,7 @@ fun GameScreen (
         modifier = Modifier
             .fillMaxSize()
             .background(SpaceBlack)
+            .offset(shakeOffset.x.dp, shakeOffset.y.dp) // shake application
     ) {
 
         // Canvas for game rendering

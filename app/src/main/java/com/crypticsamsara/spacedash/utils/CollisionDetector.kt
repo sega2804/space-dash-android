@@ -70,20 +70,24 @@ object CollisionDetector {
         playerY: Float,
         obstacle: Obstacle,
         screenWidth: Float,
-        threshold: Float = 100f
+        threshold: Float = 80f
     ): Boolean {
         val playerCenterX = playerX
         val playerCenterY = playerY + PlayerRenderer.PLAYER_HEIGHT / 2
+        val playerRadius = PlayerRenderer.PLAYER_WIDTH / 3
 
         val obstacleX = obstacle.x * screenWidth
         val obstacleY = obstacle.y
+        val obstacleRadius = obstacle.size / 2
+
 
         val distance = calculateDistance(
             playerCenterX, playerCenterY,
             obstacleX, obstacleY
         )
 
-        val collisionDistance = (PlayerRenderer.PLAYER_WIDTH / 3) + (obstacle.size / 2)
+        val collisionDistance = playerRadius + obstacleRadius
+
 
         // Near miss: close but not colliding
         return distance < (collisionDistance + threshold) && distance >= collisionDistance

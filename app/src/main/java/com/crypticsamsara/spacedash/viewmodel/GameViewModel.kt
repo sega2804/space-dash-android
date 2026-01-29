@@ -14,8 +14,10 @@ import com.crypticsamsara.spacedash.model.Star
 import com.crypticsamsara.spacedash.model.StarFactory
 import com.crypticsamsara.spacedash.ui.audio.SoundManager
 import com.crypticsamsara.spacedash.ui.components.PlayerRenderer
+import com.crypticsamsara.spacedash.ui.effects.ScreenShakeController
 import com.crypticsamsara.spacedash.ui.haptics.HapticManager
 import com.crypticsamsara.spacedash.utils.CollisionDetector
+import com.crypticsamsara.spacedash.utils.CollisionDetector.checkNearMiss
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
@@ -43,8 +45,15 @@ class GameViewModel(
     // obstacles list
     val obstacles = mutableStateListOf<Obstacle>()
 
+    // screen shake controller
+    val screenShakeController = ScreenShakeController()
+
+
     // tracking dodged obstacles
     private val dodgedObstacleIds = mutableSetOf<Int>()
+
+    // track which obstacles we have checked for near miss
+    private val nearMissedObstacleIds = mutableSetOf<Int>()
 
     // Stars List (static)
     var stars = mutableStateListOf<Star>()
@@ -68,6 +77,8 @@ class GameViewModel(
     var onExplosion: ((Float, Float) -> Unit)? = null
 
     var onComboMilestone: ((Int) -> Unit)? = null
+
+    var isScreenShakeEnabled: Boolean = true
 
     // Scoring constraints
     private companion object {
@@ -97,12 +108,14 @@ class GameViewModel(
             survivalTime = 0L,
             obstaclesDodged = 0,
             highScore = sessionHighScore,
+            isPaused = false,
             currentCombo = 0,
             maxComboReached = 0
         )
 
         obstacles.clear()
         dodgedObstacleIds.clear()
+        nearMissedObstacleIds.clear()
 
         soundManager?.startMusic()
 
@@ -136,7 +149,12 @@ class GameViewModel(
         restartGame()
     }
 
-
+    fun toggleScreenShake(enabled: Boolean) {
+        isScreenShakeEnabled = enabled
+        if (!enabled) {
+            screenShakeController.stopShake()
+        }
+    }
 
     private fun startGameLoop() {
         gameLoopJob?.cancel()
@@ -216,6 +234,10 @@ class GameViewModel(
         // Check collisions
         checkCollisions()
 
+        // check for near miss
+        checkNearMisses()
+
+
         // Remove obstacles that are off screen
         obstacles.removeAll {
             val isOffScreen = it.y > screenHeight + 100f
@@ -245,6 +267,11 @@ class GameViewModel(
                     onComboMilestone?.invoke(newCombo)
                     // haptic addition for milestone
                     hapticManager?.successVibration()
+                    // only shake if enabled
+                    if (isScreenShakeEnabled) {
+                        // screen shake for milestone
+                        screenShakeController.mediumShake(viewModelScope)
+                    }
                 } else {
                     hapticManager?.mediumVibration()
                 }
@@ -277,6 +304,22 @@ class GameViewModel(
     }
 
 
+    private fun checkNearMisses() {
+        if (!gameState.isPlaying || gameState.isGameOver || !isScreenShakeEnabled) return
+
+        val playerX = getPlayerPixelX()
+        val playerY = screenHeight - PlayerRenderer.PLAYER_HEIGHT - 100f
+
+        obstacles.forEach { obstacle ->
+            if (!nearMissedObstacleIds.contains(obstacle.id)) {
+                if (CollisionDetector.checkNearMiss(playerX, playerY, obstacle, screenWidth)) {
+                    nearMissedObstacleIds.add(obstacle.id)
+                    screenShakeController.lightShake(viewModelScope)
+                }
+            }
+        }
+    }
+
     private fun spawnObstacles() {
         if (screenWidth > 0) {
             val newObstacle = ObstacleFactory.createRandomObstacle(screenWidth)
@@ -296,11 +339,26 @@ class GameViewModel(
 
                 // Reset combo on collision
                 gameState = gameState.copy(currentCombo = 0)
+
+                // sound management
                 // Explosion sound
                 soundManager?.playExplosion()
                 onExplosion?.invoke(playerX, playerY)
                 // Vibration - strong
                 hapticManager?.strongVibration()
+                // only shake if enabled
+                if (isScreenShakeEnabled) {
+                    // screen shake - strong
+                    screenShakeController.strongShake(viewModelScope)
+                }
+
+                val obstaclePixelX  = obstacle.x * screenWidth
+                screenShakeController.directionalShake(
+                    viewModelScope,
+                    impactX = obstaclePixelX,
+                    playerX = playerX
+                )
+
                 triggerGameOver()
                 return
             }

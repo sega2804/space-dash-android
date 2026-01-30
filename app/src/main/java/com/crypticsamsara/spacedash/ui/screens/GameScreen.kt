@@ -45,6 +45,7 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.crypticsamsara.spacedash.model.StarFactory
 import com.crypticsamsara.spacedash.ui.components.ComboDisplay
+import com.crypticsamsara.spacedash.ui.components.FloatingTextRenderer
 import com.crypticsamsara.spacedash.ui.components.MilestonePopup
 import com.crypticsamsara.spacedash.ui.components.ObstacleRenderer.drawObstacle
 import com.crypticsamsara.spacedash.ui.components.ParticleSystem
@@ -70,6 +71,7 @@ fun GameScreen (
     val stars = viewModel.stars
     val particleSystem = remember { ParticleSystem() }
     val shakeOffset = viewModel.screenShakeController.shakeOffset
+    val floatingTexts = viewModel.floatingTextManager.floatingTexts
 
     var currentMilestone by remember { mutableStateOf<Int?>(null) }
 
@@ -152,7 +154,13 @@ fun GameScreen (
             with(particleSystem) {
                 drawParticles()
             }
+
+            with(FloatingTextRenderer) {
+                drawFloatingTexts(floatingTexts)
+            }
+
         }
+
 
         // Milestone popup
         currentMilestone?.let { milestone ->

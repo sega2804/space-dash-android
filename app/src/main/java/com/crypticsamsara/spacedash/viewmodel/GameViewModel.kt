@@ -8,12 +8,14 @@ import androidx.compose.runtime.setValue
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.crypticsamsara.spacedash.data.PreferencesManager
+import com.crypticsamsara.spacedash.model.FloatingTextFactory
 import com.crypticsamsara.spacedash.model.Obstacle
 import com.crypticsamsara.spacedash.model.ObstacleFactory
 import com.crypticsamsara.spacedash.model.Star
 import com.crypticsamsara.spacedash.model.StarFactory
 import com.crypticsamsara.spacedash.ui.audio.SoundManager
 import com.crypticsamsara.spacedash.ui.components.PlayerRenderer
+import com.crypticsamsara.spacedash.ui.effects.FloatingTextManager
 import com.crypticsamsara.spacedash.ui.effects.ScreenShakeController
 import com.crypticsamsara.spacedash.ui.haptics.HapticManager
 import com.crypticsamsara.spacedash.utils.CollisionDetector
@@ -47,6 +49,9 @@ class GameViewModel(
 
     // screen shake controller
     val screenShakeController = ScreenShakeController()
+
+    // floating text manager
+    val floatingTextManager = FloatingTextManager()
 
 
     // tracking dodged obstacles
@@ -116,8 +121,12 @@ class GameViewModel(
         obstacles.clear()
         dodgedObstacleIds.clear()
         nearMissedObstacleIds.clear()
+        floatingTextManager.clear()
 
         soundManager?.startMusic()
+
+        // floating text updates
+        floatingTextManager.startUpdating(viewModelScope)
 
         startGameLoop()
         startObstacleSpawner()
@@ -262,6 +271,27 @@ class GameViewModel(
                 val newCombo = gameState.currentCombo + 1
                 val newMaxCombo = maxOf(newCombo, gameState.maxComboReached)
 
+                // POINTS FOR THIS DODGE
+                // base points calculation
+                val basePoints = POINTS_PER_DODGE
+                // combo bonus calculation
+                val comboBonus = newCombo * COMBO_MULTIPLIER
+                // dodge points calculation
+                val dodgePoints = basePoints + comboBonus
+
+                // OBSTACLE POSITION FOR FLOATING TEXT
+                val obstaclePixelX = obstacle.x * screenWidth
+                val obstaclePixelY = obstacle.y
+
+                // FLOATING TEXT FOR POINTS
+                val scoreText = FloatingTextFactory.createScoreText(
+                    x = obstaclePixelX,
+                    y = obstaclePixelY,
+                    points = dodgePoints,
+                    combo = newCombo
+                )
+                floatingTextManager.addFloatingText(scoreText)
+
                 // Check for milestones
                 if (newCombo in listOf(5, 10, 25, 50, 100)) {
                     onComboMilestone?.invoke(newCombo)
@@ -272,17 +302,31 @@ class GameViewModel(
                         // screen shake for milestone
                         screenShakeController.mediumShake(viewModelScope)
                     }
+
+                    // MILESTONE FLOATING TEXT
+                    val milestoneText = FloatingTextFactory.createMilestoneText(
+                        x = screenWidth / 2,
+                        y = screenHeight / 2,
+                        milestone = newCombo
+                    )
+                    floatingTextManager.addFloatingText(milestoneText)
                 } else {
                     hapticManager?.mediumVibration()
-                }
 
-                // combo bonus calculation
-                val comboBonus = newCombo * COMBO_MULTIPLIER
+
+                //  COMBO FLOATING TEXT (every 3rd dodge if combo > 3)
+                if (newCombo > 3 && newCombo % 3 == 0) {
+                    val comboText = FloatingTextFactory.createComboText(
+                        x = screenWidth / 2,
+                        y = screenHeight / 3,
+                        combo = newCombo
+                    )
+                    floatingTextManager.addFloatingText(comboText)
+                }
+            }
 
                 // Dodge sound
                 soundManager?.playDodge()
-                // Vibration
-                hapticManager?.mediumVibration()
 
                 // Increment dodged count
                 val newDodgeCount = gameState.obstaclesDodged + 1
@@ -380,6 +424,7 @@ class GameViewModel(
 
         // Stop music
         soundManager?.pauseMusic()
+        floatingTextManager.stop()
 
         gameState = gameState.copy(
             isPlaying = false,
@@ -466,6 +511,7 @@ class GameViewModel(
     override fun onCleared() {
         super.onCleared()
         soundManager?.release()
+        floatingTextManager.stop()
         gameLoopJob?.cancel()
         spawnJob?.cancel()
         scoreJob?.cancel()

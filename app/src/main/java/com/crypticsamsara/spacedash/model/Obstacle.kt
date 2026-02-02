@@ -24,21 +24,24 @@ enum class ObstacleType {
 object ObstacleFactory {
     private var nextId = 0
 
-    // Obstacle dimensions
-    const val MIN_SIZE = 40f
-    const val MAX_SIZE = 70f
-    const val MIN_SPEED = 3f
-    const val MAX_SPEED = 8f
 
-    fun createRandomObstacle(screenWidth: Float): Obstacle {
+    fun createRandomObstacle(
+        screenWidth: Float,
+        baseSpeed: Float,
+        baseSize: Float,
+        ): Obstacle {
         val id = nextId++
         val x = Random.nextFloat() // Random X position (0.0 - 1.0)
         val y = -100f // Start above screen
-        val speed = Random.nextFloat() * (MAX_SPEED - MIN_SPEED) + MIN_SPEED
-        val size = Random.nextFloat() * (MAX_SIZE - MIN_SIZE) + MIN_SIZE
+
+        val speedVariance = baseSpeed * 0.2f
+        val speed = baseSpeed + Random.nextFloat() * speedVariance
+
+        val sizeVariance = baseSize * 0.2f
+        val size = baseSpeed + Random.nextFloat() * sizeVariance
 
         // Random obstacle type
-        val type = ObstacleType.values().random()
+        val type = ObstacleType.entries.toTypedArray().random()
 
         // Color based on type
         val color = when (type) {
@@ -51,11 +54,10 @@ object ObstacleFactory {
             id = id,
             x = x,
             y = y,
-            speed = speed,
-            size = size,
+            speed = speed.coerceAtLeast(3f),
+            size = size.coerceAtLeast(40f),
             color = color,
             type = type
         )
     }
-
 }

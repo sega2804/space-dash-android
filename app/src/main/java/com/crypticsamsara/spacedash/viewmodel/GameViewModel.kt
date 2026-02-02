@@ -5,9 +5,11 @@ import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.graphics.Color
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.crypticsamsara.spacedash.data.PreferencesManager
+import com.crypticsamsara.spacedash.data.game.DifficultyManager
 import com.crypticsamsara.spacedash.model.FloatingTextFactory
 import com.crypticsamsara.spacedash.model.Obstacle
 import com.crypticsamsara.spacedash.model.ObstacleFactory
@@ -70,6 +72,8 @@ class GameViewModel(
     var screenHeight by mutableFloatStateOf(0f)
         private set
 
+    // difficulty level up
+    var onDifficultyLevelUp: ((Int) -> Unit)? = null
 
     // Game loop job
     private var gameLoopJob: Job? = null
@@ -78,6 +82,9 @@ class GameViewModel(
 
     // High Score
     private var sessionHighScore = 0
+
+    // difficulty level up
+    private var lastDifficultyLevel = 1
 
     var onExplosion: ((Float, Float) -> Unit)? = null
 
@@ -182,6 +189,9 @@ class GameViewModel(
                 // spawn if not paused
                 if (!gameState.isPaused) {
                     spawnObstacles()
+
+                    // dynamic spawn interval based on difficulty
+                    val spawnInterval = DifficultyManager.getSpawnInterval(gameState.survivalTime)
                     delay((1000L..2500L).random()) // spawn every 1-2.5 seconds
                 } else {
                     delay(100L) // pause for 0.1 second
@@ -237,6 +247,15 @@ class GameViewModel(
             obstacle.y += obstacle.speed
         }
 
+        // difficulty level change
+        val currentDifficultyLevel = getCurrentDifficultyLevel()
+        if (currentDifficultyLevel > lastDifficultyLevel) {
+            lastDifficultyLevel = currentDifficultyLevel
+            onDifficultyLevelUp?.invoke(currentDifficultyLevel)
+
+            hapticManager?.lightTap()
+        }
+
         // Check for dodged obstacles
         checkDodgedObstacles()
 
@@ -251,7 +270,8 @@ class GameViewModel(
         obstacles.removeAll {
             val isOffScreen = it.y > screenHeight + 100f
             if (isOffScreen) {
-                dodgedObstacleIds.remove(it.id) // Clean up tracking
+                dodgedObstacleIds.remove(it.id)
+                nearMissedObstacleIds.remove(it.id)// Clean up tracking
             }
             isOffScreen
         }
@@ -366,8 +386,16 @@ class GameViewModel(
 
     private fun spawnObstacles() {
         if (screenWidth > 0) {
-            val newObstacle = ObstacleFactory.createRandomObstacle(screenWidth)
-            obstacles.add(newObstacle)
+            // difficulty based parameters
+            val baseSpeed = DifficultyManager.getObstacleSpeed(gameState.survivalTime)
+            val baseSize = DifficultyManager.getObstacleSize(gameState.survivalTime)
+
+            val obstacle = ObstacleFactory.createRandomObstacle(
+                screenWidth,
+                baseSpeed = baseSpeed,
+                baseSize = baseSize
+            )
+            obstacles.add(obstacle)
         }
     }
 
@@ -506,6 +534,18 @@ class GameViewModel(
     fun onButtonClick() {
         soundManager?.playClick()
         hapticManager?.lightTap()
+    }
+
+    fun getCurrentDifficultyLevel(): Int {
+        return DifficultyManager.getDifficultyLevel(gameState.survivalTime)
+    }
+
+    fun getCurrentDifficultyDescription(): String {
+        return DifficultyManager.getDifficultyDescription(gameState.survivalTime)
+    }
+
+    fun getCurrentDifficultyColor(): Color {
+        return DifficultyManager.getDifficultyColor(gameState.survivalTime)
     }
 
     override fun onCleared() {

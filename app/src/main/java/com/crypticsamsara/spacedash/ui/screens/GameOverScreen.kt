@@ -21,6 +21,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -38,6 +39,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.crypticsamsara.spacedash.data.game.DifficultyManager
 import com.crypticsamsara.spacedash.ui.theme.DangerRed
 import com.crypticsamsara.spacedash.ui.theme.NeonCyan
 import com.crypticsamsara.spacedash.ui.theme.NeonPurple
@@ -55,7 +57,8 @@ fun GameOverScreen(
     onRestart: () -> Unit,
     onHome: (() -> Unit)? = null,
     onButtonClick: () -> Unit = {},
-    maxCombo: Int = 0
+    maxCombo: Int = 0,
+    maxDifficultyLevel: Int = 1
 ) {
     // Pulsing animation for "Game Over"
     val infiniteTransition = rememberInfiniteTransition(label = "pulse")
@@ -174,6 +177,13 @@ fun GameOverScreen(
                             value = "$highScore",
                             color = Color(0xFFFFD700)
                         )
+
+                        // Difficulty stat
+                        StatItem(
+                            label = "MAX LVL",
+                            value = "$maxDifficultyLevel",
+                            color = DifficultyManager.getDifficultyColor((maxDifficultyLevel - 1) * 18000L)
+                        )
                     }
                 }
             }
@@ -214,7 +224,40 @@ fun GameOverScreen(
                 }
             }
 
-            Spacer(modifier = Modifier.height(16.dp))
+            // Home button
+            if (onHome != null) {
+                Button(
+                    onClick = {
+                        onButtonClick()
+                        onHome()
+                    },
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = NeonPurple
+                    ),
+                    modifier = Modifier
+                        .fillMaxWidth(0.7f)
+                        .height(60.dp),
+                    shape = RoundedCornerShape(12.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Home,
+                        contentDescription = "Home",
+                        tint = SpaceBlack,
+                        modifier = Modifier.size(24.dp)
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(
+                        text = "MAIN MENU",
+                        fontSize = 18.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = SpaceBlack
+                    )
+                }
+            }
+        }
+
+
+        Spacer(modifier = Modifier.height(16.dp))
 
             // Performance message
             val message = getPerformanceMessage(score)
@@ -226,7 +269,7 @@ fun GameOverScreen(
             )
         }
     }
-}
+
 
 
 @Composable

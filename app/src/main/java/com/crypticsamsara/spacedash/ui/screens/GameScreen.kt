@@ -17,8 +17,10 @@ import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowLeft
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
+import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.KeyboardArrowLeft
 import androidx.compose.material.icons.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.Pause
@@ -45,6 +47,8 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.crypticsamsara.spacedash.model.StarFactory
 import com.crypticsamsara.spacedash.ui.components.ComboDisplay
+import com.crypticsamsara.spacedash.ui.components.DifficultyIndicator
+import com.crypticsamsara.spacedash.ui.components.DifficultyLevelUpPopup
 import com.crypticsamsara.spacedash.ui.components.FloatingTextRenderer
 import com.crypticsamsara.spacedash.ui.components.MilestonePopup
 import com.crypticsamsara.spacedash.ui.components.ObstacleRenderer.drawObstacle
@@ -74,20 +78,7 @@ fun GameScreen (
     val floatingTexts = viewModel.floatingTextManager.floatingTexts
 
     var currentMilestone by remember { mutableStateOf<Int?>(null) }
-
-    /*
-    // For testing to start game automatically
-    LaunchedEffect(Unit) {
-        if (!gameState.isPlaying && !gameState.isGameOver) {
-            viewModel.startGame()
-        }
-    }
-
-    // Logging purposes
-    LaunchedEffect(gameState.isPlaying, gameState.isGameOver) {
-        println("isPlaying: ${gameState.isPlaying}, isGameOver: ${gameState.isGameOver}")
-    }
-     */
+    var difficultyLevelUp by remember { mutableStateOf<Int?>(null) }
 
     // Setting up explosion
     LaunchedEffect(Unit) {
@@ -99,9 +90,14 @@ fun GameScreen (
         viewModel.onComboMilestone = {milestone ->
             currentMilestone = milestone
         }
+
+        // difficulty level up callback
+        viewModel.onDifficultyLevelUp = {level ->
+            difficultyLevelUp = level
+        }
     }
 
-    // UPDATE MOVING STARS
+    // MOVING STARS
     LaunchedEffect(gameState.isPlaying) {
         while (gameState.isPlaying) {
             StarFactory.updateStars(stars, viewModel.screenHeight)
@@ -161,6 +157,47 @@ fun GameScreen (
 
         }
 
+        // back button in top-left
+        if (onBackToHome != null && !gameState.isPlaying) {
+            IconButton(
+                onClick = {
+                    viewModel.onButtonClick()
+                    onBackToHome()
+                },
+                modifier = Modifier
+                    .align(Alignment.TopStart)
+                    .padding(16.dp)
+            ) {
+                Icon(
+                    imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                    contentDescription = "Back to Home",
+                    tint = StarWhite
+                )
+            }
+        }
+
+        // difficulty level up notifs
+        difficultyLevelUp?.let { level ->
+            if (level >= 5) {
+                Box(
+                    modifier = Modifier
+                        .align (Alignment.Center)
+                        .padding(32.dp)
+                ) {
+                    DifficultyLevelUpPopup(
+                        level = level,
+                        onDismiss = { difficultyLevelUp = null }
+                    )
+                }
+            } else {
+                // automatic dismissal for lower levels
+                LaunchedEffect(level) {
+                    delay(1000)
+                    difficultyLevelUp = null
+                }
+            }
+        }
+
 
         // Milestone popup
         currentMilestone?.let { milestone ->
@@ -201,6 +238,14 @@ fun GameScreen (
                    modifier = Modifier.padding(top = 8.dp)
                )
 
+               // difficulty indicator
+               DifficultyIndicator(
+                   level = viewModel.getCurrentDifficultyLevel(),
+                   description = viewModel.getCurrentDifficultyDescription(),
+                   color = viewModel.getCurrentDifficultyColor(),
+                   modifier = Modifier.padding(top = 8.dp)
+               )
+
                // Stats row
                Row(
                    horizontalArrangement = Arrangement.spacedBy(24.dp),
@@ -238,83 +283,6 @@ fun GameScreen (
                }
            }
        }
-/*
-       // Game Over Overlay
-       if (gameState.isGameOver) { // To make it visible only during gameplay
-           Box(
-               modifier = Modifier
-                   .fillMaxSize()
-                   .background(Color.Black.copy(alpha = 0.7f)),
-               contentAlignment = Alignment.Center
-           ) {
-               Column(
-                   horizontalAlignment = Alignment.CenterHorizontally,
-                   verticalArrangement = Arrangement.Center
-               ) {
-                   Text(
-                       text = "GAME OVER",
-                       color = DangerRed,
-                       fontSize = 48.sp,
-                       fontWeight = FontWeight.Bold
-                   )
-
-                   Spacer(modifier = Modifier.height(32.dp))
-
-
-                   // Stats summary
-                   Row(
-                       horizontalArrangement = Arrangement.spacedBy(32.dp)
-                   ) {
-
-                       Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                           Text(
-                               text = viewModel.getFormattedSurvivalTime(),
-                               color = StarWhite,
-                               fontSize = 24.sp,
-                               fontWeight = FontWeight.Bold
-                           )
-                           Text(
-                               text = "Survival Time",
-                               color = StarWhite.copy(alpha = 0.6f),
-                               fontSize = 14.sp
-                           )
-                       }
-
-                       Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                           Text(
-                               text = "${gameState.obstaclesDodged}",
-                               color = NeonPurple,
-                               fontSize = 24.sp,
-                               fontWeight = FontWeight.Bold
-                           )
-                           Text(
-                               text = "Obstacles Dodged",
-                               color = StarWhite.copy(alpha = 0.6f),
-                               fontSize = 14.sp
-                           )
-                       }
-                   }
-
-                   Spacer(modifier = Modifier.height(40.dp))
-
-                   Button(
-                       onClick = { viewModel.restartGame() },
-                       colors = ButtonDefaults.buttonColors(
-                           containerColor = NeonCyan
-                       ),
-                       modifier = Modifier.size(width = 200.dp, height = 60.dp)
-                   ) {
-                       Text(
-                           text = "RESTART",
-                           fontSize = 20.sp,
-                           fontWeight = FontWeight.Bold,
-                           color = SpaceBlack
-                       )
-                   }
-               }
-          }
-        }
- */
 
         // Pause button
         if (gameState.isPlaying && !gameState.isGameOver && !gameState.isPaused) {
@@ -358,6 +326,7 @@ fun GameScreen (
                 obstacleDodges = gameState.obstaclesDodged,
                 highScore = gameState.highScore,
                 maxCombo = gameState.maxComboReached,
+                maxDifficultyLevel = viewModel.getCurrentDifficultyLevel(),
                 onRestart = {
                     particleSystem.clear() // Clear particles on restart
                     viewModel.restartGame()

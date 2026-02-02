@@ -21,6 +21,7 @@ import com.crypticsamsara.spacedash.ui.screens.GameNavigation
 import com.crypticsamsara.spacedash.ui.screens.GameScreen
 import com.crypticsamsara.spacedash.ui.theme.SpaceDashTheme
 import com.crypticsamsara.spacedash.viewmodel.GameViewModel
+import com.crypticsamsara.spacedash.viewmodel.GameViewModelFactory
 
 class MainActivity : ComponentActivity() {
 
@@ -32,7 +33,7 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
 
         // Start soundManager
-        soundManager = SoundManager(this),
+        soundManager = SoundManager(this)
         hapticManager = HapticManager(this)
 
         setContent {
@@ -42,10 +43,10 @@ class MainActivity : ComponentActivity() {
                     color = MaterialTheme.colorScheme.background
                 ) {
                     // create viewmodel with soundManager
-                    val viewModel: GameViewModel = viewModel(
-                        factory = GameViewModelFactory(soundManager, hapticManager)
+                    GameNavigation(
+                        soundManager = soundManager,
+                        hapticManager = hapticManager
                     )
-                    GameScreen(viewModel = viewModel)
                 }
             }
         }
@@ -67,10 +68,16 @@ class MainActivity : ComponentActivity() {
     }
 }
 
+/*
 @Preview(showBackground = true)
 @Composable
 fun GreetingPreview() {
     SpaceDashTheme {
-        GameNavigation()
+        GameNavigation(
+            soundManager = soundManager,
+            hapticManager = hapticManager
+        )
     }
 }
+
+ */

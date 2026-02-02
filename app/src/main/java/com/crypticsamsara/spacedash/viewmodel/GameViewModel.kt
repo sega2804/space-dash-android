@@ -141,18 +141,18 @@ class GameViewModel(
     }
 
     fun pauseGame() {
-        if (!gameState.isPlaying || gameState.isGameOver || gameState.isPaused)
+        if (!gameState.isPlaying || gameState.isGameOver || gameState.isPaused) return
 
-            gameState = gameState.copy(isPaused = true)
+        gameState = gameState.copy(isPaused = true)
 
         // To pause music
         soundManager?.pauseMusic()
     }
 
     fun resumeGame() {
-        if (!gameState.isPlaying || gameState.isGameOver || gameState.isPaused)
+        if (!gameState.isPlaying || gameState.isGameOver || !gameState.isPaused) return
 
-            gameState = gameState.copy(isPaused = true)
+        gameState = gameState.copy(isPaused = false)
 
         // Resume music
         soundManager?.resumeMusic()
@@ -176,8 +176,10 @@ class GameViewModel(
         gameLoopJob?.cancel()
         gameLoopJob = viewModelScope.launch {
             while (isActive && gameState.isPlaying) {
-                updateGame()
-                delay(16L) // 60 FPS
+                if (!gameState.isPaused) {
+                    updateGame()
+                }
+                delay(16L) // 60 FPs
             }
         }
     }
@@ -227,10 +229,10 @@ class GameViewModel(
                 val currentTime = System.currentTimeMillis()
                 val survivalTime = currentTime - startTime - totalPausedTime
 
-                // Update survival time
+                // survival time
                 gameState = gameState.copy(survivalTime = survivalTime)
 
-                // Add time-based score (10 points per second)
+                // time-based score (10 points per second)
                 val timeScore = (survivalTime / 100) // 1 point per 100ms = 10
                 val totalScore = timeScore.toInt() + (gameState.obstaclesDodged * POINTS_PER_DODGE)
 

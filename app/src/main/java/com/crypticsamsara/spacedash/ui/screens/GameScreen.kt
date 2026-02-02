@@ -5,6 +5,7 @@ import android.R.attr.x
 import android.R.attr.y
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -98,8 +99,8 @@ fun GameScreen (
     }
 
     // MOVING STARS
-    LaunchedEffect(gameState.isPlaying) {
-        while (gameState.isPlaying) {
+    LaunchedEffect(gameState.isPlaying, gameState.isPaused) {
+        while (gameState.isPlaying && !gameState.isPaused) {
             StarFactory.updateStars(stars, viewModel.screenHeight)
             delay(16L) // 60 FPS
         }
@@ -197,7 +198,6 @@ fun GameScreen (
                 }
             }
         }
-
 
         // Milestone popup
         currentMilestone?.let { milestone ->
@@ -306,6 +306,7 @@ fun GameScreen (
 
         // Pause menu overlay
         if (gameState.isPaused){
+            /*
             PauseMenuOverlay(
                 onResume = { viewModel.resumeGame() },
                 onRestart = { viewModel.restartFromPause() },
@@ -315,6 +316,31 @@ fun GameScreen (
                              },
                 onButtonClick = { viewModel.onButtonClick() }
             )
+             */
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(Color.Black.copy(alpha = 0.7f))
+                    .clickable{ viewModel.resumeGame() },
+                contentAlignment = Alignment.Center
+            ) {
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    Text(
+                        text = "PAUSED",
+                        color = NeonCyan,
+                        fontSize = 56.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+                    Spacer(modifier = Modifier.height(24.dp))
+                    Text(
+                        text = "Tap to Resume",
+                        color = StarWhite,
+                        fontSize = 20.sp
+                    )
+                }
+            }
         }
 
         // GameOverScreen

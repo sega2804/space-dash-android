@@ -2,8 +2,10 @@ package com.crypticsamsara.spacedash.ui.audio
 
 import android.content.Context
 import android.media.AudioAttributes
+import android.media.AudioManager
 import android.media.MediaPlayer
 import android.media.SoundPool
+import android.os.Build
 import com.crypticsamsara.spacedash.R
 
 class SoundManager(private val context: Context) {
@@ -43,15 +45,20 @@ class SoundManager(private val context: Context) {
     }
 
     private fun setupSoundPool() {
-        val audioAttributes = AudioAttributes.Builder()
-            .setUsage(AudioAttributes.USAGE_GAME)
-            .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
-            .build()
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+            val audioAttributes = AudioAttributes.Builder()
+                .setUsage(AudioAttributes.USAGE_GAME)
+                .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
+                .build()
 
-        soundPool = SoundPool.Builder()
-            .setMaxStreams(5) // Max 5 sounds playing simultaneously
-            .setAudioAttributes(audioAttributes)
-            .build()
+            soundPool = SoundPool.Builder()
+                .setMaxStreams(5) // Max 5 sounds playing simultaneously
+                .setAudioAttributes(audioAttributes)
+                .build()
+        } else {
+            @Suppress("DEPRECATION")
+            soundPool = SoundPool(5, AudioManager.STREAM_MUSIC, 0)
+        }
 
         // Load sound effects
         try {
@@ -140,11 +147,4 @@ class SoundManager(private val context: Context) {
         soundPool?.release()
         soundPool = null
     }
-
-
-
-
-
-
-
 }

@@ -74,10 +74,9 @@ class MainActivity : ComponentActivity() {
 fun GreetingPreview() {
     SpaceDashTheme {
         GameNavigation(
-            soundManager = soundManager,
-            hapticManager = hapticManager
+            soundManager = SoundManager(MainActivity()),
+            hapticManager = HapticManager(MainActivity())
         )
     }
 }
-
  */

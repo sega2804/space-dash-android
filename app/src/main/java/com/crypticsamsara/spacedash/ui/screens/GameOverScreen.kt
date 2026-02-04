@@ -1,6 +1,7 @@
 package com.crypticsamsara.spacedash.ui.screens
 
 import android.R.attr.text
+import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateFloat
@@ -27,24 +28,32 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.CardElevation
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.scale
+import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.crypticsamsara.spacedash.data.game.DifficultyManager
+import com.crypticsamsara.spacedash.ui.audio.SoundManager
+import com.crypticsamsara.spacedash.ui.haptics.HapticManager
 import com.crypticsamsara.spacedash.ui.theme.DangerRed
 import com.crypticsamsara.spacedash.ui.theme.NeonCyan
 import com.crypticsamsara.spacedash.ui.theme.NeonPurple
 import com.crypticsamsara.spacedash.ui.theme.SpaceBlack
 import com.crypticsamsara.spacedash.ui.theme.SpaceBlue
+import com.crypticsamsara.spacedash.ui.theme.SpaceDashTheme
 import com.crypticsamsara.spacedash.ui.theme.StarWhite
 import com.crypticsamsara.spacedash.viewmodel.GameViewModel
 
@@ -52,7 +61,7 @@ import com.crypticsamsara.spacedash.viewmodel.GameViewModel
 fun GameOverScreen(
     score: Int,
     survivalTime: String,
-    obstacleDodges: Int,
+    obstaclesDodged: Int,
     highScore: Int,
     onRestart: () -> Unit,
     onHome: (() -> Unit)? = null,
@@ -72,6 +81,17 @@ fun GameOverScreen(
         label = "alpha"
     )
 
+    // Scale animation for score
+    val scale by infiniteTransition.animateFloat(
+    initialValue = 1f,
+        targetValue = 1.1f,
+    animationSpec = infiniteRepeatable(
+        animation = tween(200, easing = FastOutSlowInEasing),
+        repeatMode = RepeatMode.Reverse
+    ),
+        label = "scale"
+    )
+
     Box(
         modifier = Modifier
             .fillMaxSize()
@@ -79,7 +99,7 @@ fun GameOverScreen(
                 Brush.verticalGradient(
                     colors = listOf(
                         SpaceBlack,
-                        SpaceBlue.copy(alpha = 0.3f),
+                        SpaceBlue.copy(alpha = 0.4f),
                         SpaceBlack
                     )
                 )
@@ -88,62 +108,91 @@ fun GameOverScreen(
     ) {
         Column(
             horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.Center,
-            modifier = Modifier.padding(24.dp)
-        ) {
+            verticalArrangement = Arrangement.spacedBy(24.dp),
+            modifier = Modifier
+                .padding(24.dp)
+                .fillMaxWidth(),
+           ) {
 
             // Animated "Game Over" title
             Text(
                 text = "GAME OVER",
                 color = DangerRed.copy(alpha = alpha),
-                fontSize = 56.sp,
-                fontWeight = FontWeight.Bold
+                fontSize = 42.sp,
+                fontWeight = FontWeight.Bold,
+                textAlign = TextAlign.Center,
             )
-
-            Spacer(modifier = Modifier.height(40.dp))
 
             // Score card
             Card(
-                modifier = Modifier.fillMaxWidth(0.9f),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .scale(scale),
                 colors = CardDefaults.cardColors(
                     containerColor = SpaceBlue.copy(alpha = 0.6f)
                 ),
-                shape = RoundedCornerShape(16.dp),
-                elevation = CardDefaults.cardElevation(8.dp)
+                shape = RoundedCornerShape(20.dp),
+                elevation = CardDefaults.cardElevation(12.dp)
             ) {
                 Column(
                     modifier = Modifier
-                        .padding(24.dp)
+                        .padding(20.dp)
                         .fillMaxWidth(),
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
                     // New High Score indicator
-                    if (score >= highScore && highScore > 0) {
-                        Text(
-                            text = "🏆 NEW HIGH SCORE! 🏆",
-                            color = Color(0xFFFFD700), // Gold
-                            fontSize = 20.sp,
-                            fontWeight = FontWeight.Bold
-                        )
+                    // input this in case of error - score >= highScore && highScore > 0
+                    if (highScore in 1..score) {
+                        Row(
+                            horizontalArrangement = Arrangement.Center,
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier
+                                .background(
+                                    color = Color(0xFFFFD700).copy(alpha = 0.2f),
+                                    shape = RoundedCornerShape(12.dp)
+                                )
+                                .padding(horizontal = 16.dp, vertical = 8.dp)
+                        ) {
+                            Text(
+                                text = "🏆",
+                                fontSize = 20.sp,
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(
+                                text = "NEW HIGH SCORE!",
+                                color = Color(0xFFFFD700),
+                                fontSize = 16.sp,
+                                fontWeight = FontWeight.Bold
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(
+                                text = "🏆",
+                                fontSize = 20.sp,
+                            )
+                        }
                         Spacer(modifier = Modifier.height(16.dp))
                     }
 
                     // Final Score
                     Text(
                         text = "FINAL SCORE",
-                        color = StarWhite.copy(alpha = 0.7f),
+                        color = StarWhite.copy(alpha = 0.6f),
                         fontSize = 16.sp,
-                        fontWeight = FontWeight.Medium
+                        fontWeight = FontWeight.SemiBold,
+                        letterSpacing = 2.sp
                     )
 
+                    Spacer(modifier = Modifier.height(8.dp))
+
+                    // Score number
                     Text(
-                        text = "$score",
+                        text = score.toString(),
                         color = NeonCyan,
-                        fontSize = 72.sp,
+                        fontSize = 56.sp,
                         fontWeight = FontWeight.Bold
                     )
-
-                    Spacer(modifier = Modifier.height(24.dp))
+                }
+            }
 
                     // Stats grid
                     Row(
@@ -152,47 +201,53 @@ fun GameOverScreen(
                     ) {
                         // Survival time stat
                         StatItem(
-                            label = "TIME",
+                            icon = "⏱️",
                             value = survivalTime,
+                            label = "TIME",
                             color = StarWhite
                         )
 
                         // Obstacle dodged stat
                         StatItem(
+                            icon = "🎯",
+                            value = obstaclesDodged.toString(),
                             label = "DODGED",
-                            value = "$obstacleDodges",
                             color = NeonPurple
                         )
+                    }
 
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceEvenly
+                    ) {
                         // Max combo stat
                         StatItem(
-                            label = "MAX COMBO",
+                            icon = "🔥",
                             value = "${maxCombo}x",
-                            color = Color(0xFFFFD700)
+                            label = "COMBO",
+                            color = Color(0xFFFF6B35)
                         )
 
                         // High score stat
                         StatItem(
+                            icon = "⭐",
+                            value = highScore.toString(),
                             label = "BEST",
-                            value = "$highScore",
                             color = Color(0xFFFFD700)
-                        )
 
-                        // Difficulty stat
-                        StatItem(
-                            label = "MAX LVL",
-                            value = "$maxDifficultyLevel",
-                            color = DifficultyManager.getDifficultyColor((maxDifficultyLevel - 1) * 18000L)
                         )
                     }
-                }
-            }
+                Spacer(modifier = Modifier.height(8.dp))
 
-            Spacer(modifier = Modifier.height(40.dp))
+            // Performance message
+            PerformanceMessage(score = score)
+
+
 
         // Action buttons
-            Row(
-                horizontalArrangement = Arrangement.spacedBy(16.dp)
+            Column(
+                modifier = Modifier.fillMaxWidth(),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
                 // Restart button
                 Button(
@@ -204,9 +259,10 @@ fun GameOverScreen(
                         containerColor = NeonCyan
                     ),
                     modifier = Modifier
-                        .weight(1f)
-                        .height(60.dp),
-                    shape = RoundedCornerShape(12.dp)
+                        .fillMaxWidth()
+                        .height(56.dp),
+                    shape = RoundedCornerShape(16.dp),
+                    elevation = ButtonDefaults.buttonElevation(8.dp)
                 ) {
                     Icon(
                         imageVector = Icons.Default.Refresh,
@@ -214,7 +270,7 @@ fun GameOverScreen(
                         tint = SpaceBlack,
                         modifier = Modifier.size(24.dp)
                     )
-                    Spacer(modifier = Modifier.width(8.dp))
+                    Spacer(modifier = Modifier.width(12.dp))
                     Text(
                         text = "PLAY AGAIN",
                         fontSize = 18.sp,
@@ -222,88 +278,182 @@ fun GameOverScreen(
                         color = SpaceBlack
                     )
                 }
-            }
 
-            // Home button
-            if (onHome != null) {
+            // Main menu button
+            onHome?.let { homeAction ->
                 Button(
                     onClick = {
                         onButtonClick()
-                        onHome()
+                        homeAction()
                     },
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = NeonPurple
-                    ),
                     modifier = Modifier
-                        .fillMaxWidth(0.7f)
-                        .height(60.dp),
-                    shape = RoundedCornerShape(12.dp)
+                        .fillMaxWidth()
+                        .height(56.dp),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = StarWhite.copy(alpha = 0.15f)
+                    ),
+                    shape = RoundedCornerShape(16.dp)
                 ) {
                     Icon(
                         imageVector = Icons.Default.Home,
                         contentDescription = "Home",
-                        tint = SpaceBlack,
+                        tint = StarWhite,
                         modifier = Modifier.size(24.dp)
                     )
-                    Spacer(modifier = Modifier.width(8.dp))
+                    Spacer(modifier = Modifier.width(12.dp))
                     Text(
                         text = "MAIN MENU",
                         fontSize = 18.sp,
                         fontWeight = FontWeight.Bold,
-                        color = SpaceBlack
+                        color = StarWhite
                     )
                 }
             }
-        }
-
-
-        Spacer(modifier = Modifier.height(16.dp))
-
-            // Performance message
-            val message = getPerformanceMessage(score)
-            Text(
-                text = message,
-                color = StarWhite.copy(alpha = 0.8f),
-                fontSize = 16.sp,
-                fontWeight = FontWeight.Medium
-            )
+            }
         }
     }
+}
+
+@Composable
+private fun PerformanceMessage(score: Int) {
+ val (message, emoji, color) = getPerformanceMessage(score)
+
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = color.copy(alpha = 0.15f)
+        ),
+        shape = RoundedCornerShape(12.dp)
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            horizontalArrangement = Arrangement.Center,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                text = emoji,
+                fontSize = 32.sp
+            )
+            Spacer(modifier = Modifier.width(12.dp))
+
+            Column(
+                horizontalAlignment = Alignment.Start
+            ) {
+                Text(
+                    text = message,
+                    color = color,
+                    fontSize = 20.sp,
+                    fontWeight = FontWeight.Bold
+                )
+                Text(
+                    text = getPerformanceSub(score),
+                    color = StarWhite.copy(alpha = 0.6f),
+                    fontSize = 11.sp,
+                )
+            }
+        }
+    }
+}
+
 
 
 
 @Composable
 private fun StatItem(
+    icon: String,
     label: String,
     value: String,
     color: Color
 ) {
-    Column(
-        horizontalAlignment = Alignment.CenterHorizontally,
-        modifier = Modifier.padding(8.dp)
+    Card(
+        modifier = Modifier
+            .width(160.dp)
+            .height(100.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = SpaceBlue.copy(alpha = 0.4f)
+        ),
+        shape = RoundedCornerShape(16.dp)
     ) {
-        Text(
-            text = value,
-            color = color,
-            fontSize = 28.sp,
-            fontWeight = FontWeight.Bold
-        )
-        Text(
-            text = label,
-            color = StarWhite.copy(alpha = 0.6f),
-            fontSize = 12.sp,
-            fontWeight = FontWeight.Medium
-        )
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(12.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center
+        ) {
+            // Icon
+            Text(
+                text = icon,
+                fontSize = 24.sp
+            )
+
+            Spacer(modifier = Modifier.height(4.dp))
+
+            // Value
+            Text(
+                text = value,
+                color = color,
+                fontSize = 24.sp,
+                fontWeight = FontWeight.Bold,
+                maxLines = 1
+            )
+
+            // Label
+            Text(
+                text = label,
+                color = StarWhite.copy(alpha = 0.5f),
+                fontSize = 11.sp,
+                fontWeight = FontWeight.Medium,
+                letterSpacing = 1.sp
+            )
+        }
+    }
+}
+private fun getPerformanceMessage(score: Int): Triple<String, String, Color> {
+    return when (score) {
+        in 0..99 -> Triple("Keep Practicing!", "🎮", Color(0xFF9E9E9E))
+        in 100..249 -> Triple("Not Bad!", "👍", Color(0xFF8BC34A))
+        in 250..499 -> Triple("Good Job!", "💪", Color(0xFF4CAF50))
+        in 500..999 -> Triple("Great Work!", "✨", Color(0xFF00BCD4))
+        in 1000..1499 -> Triple("Excellent!", "🌟", Color(0xFF2196F3))
+        in 1500..1999 -> Triple("Amazing!", "🔥", Color(0xFFFF9800))
+        in 2000..2999 -> Triple("Incredible!", "⚡", Color(0xFFFF6B35))
+        in 3000..4999 -> Triple("Legendary!", "👑", Color(0xFFFFD700))
+        else -> Triple("GODLIKE!", "💎", Color(0xFFE91E63))
     }
 }
 
-private fun getPerformanceMessage(score: Int): String {
-    return when {
-        score >= 2000 -> "🌟 LEGENDARY PILOT! You're unstoppable!"
-        score >= 1500 -> "⚡ INCREDIBLE! Master of the stars!"
-        score >= 1000 -> "🚀 AMAZING! You're a natural!"
-        score >= 500 -> "✨ GREAT JOB! Keep improving!"
-        score >= 250 -> "💫 NICE TRY! You're getting better!"
-        else -> "🎮 KEEP PRACTICING! You've got this!"
+private fun getPerformanceSub(score: Int): String {
+    return when (score) {
+        in 0..99 -> "You're just getting started!"
+        in 100..249 -> "Keep improving!"
+        in 250..499 -> "You're getting the hang of it!"
+        in 500..999 -> "You're a natural!"
+        in 1000..1499 -> "Impressive skills!"
+        in 1500..1999 -> "You're unstoppable!"
+        in 2000..2999 -> "Master of the stars!"
+        in 3000..4999 -> "You're a legend!"
+        else -> "Hall of fame material!"
+    }
+}
+
+@Preview(showBackground = true)
+@Composable
+fun GameOverScreenPreview() {
+    SpaceDashTheme {
+        GameOverScreen(
+            score = 1234,
+            survivalTime = "3:45",
+            obstaclesDodged = 42,
+            highScore = 2000,
+            onRestart = {},
+            onHome = {},
+            maxCombo = 15,
+            maxDifficultyLevel = 5
+        )
     }
 }

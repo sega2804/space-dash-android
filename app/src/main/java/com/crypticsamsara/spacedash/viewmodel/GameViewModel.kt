@@ -16,12 +16,19 @@ import com.crypticsamsara.spacedash.model.BulletType
 import com.crypticsamsara.spacedash.model.FloatingTextFactory
 import com.crypticsamsara.spacedash.model.Obstacle
 import com.crypticsamsara.spacedash.model.ObstacleFactory
+import com.crypticsamsara.spacedash.model.PowerUp
+import com.crypticsamsara.spacedash.model.PowerUpFactory
+import com.crypticsamsara.spacedash.model.PowerUpType
 import com.crypticsamsara.spacedash.model.Star
 import com.crypticsamsara.spacedash.model.StarFactory
+import com.crypticsamsara.spacedash.model.Weapon
+import com.crypticsamsara.spacedash.model.WeaponFactory
+import com.crypticsamsara.spacedash.model.WeaponType
 import com.crypticsamsara.spacedash.ui.audio.SoundManager
 import com.crypticsamsara.spacedash.ui.components.PlayerRenderer
 import com.crypticsamsara.spacedash.ui.effects.FloatingTextManager
 import com.crypticsamsara.spacedash.ui.effects.ScreenShakeController
+import com.crypticsamsara.spacedash.ui.effects.ShootingEffectsManager
 import com.crypticsamsara.spacedash.ui.haptics.HapticManager
 import com.crypticsamsara.spacedash.utils.CollisionDetector
 import com.crypticsamsara.spacedash.utils.CollisionDetector.checkNearMiss
@@ -30,10 +37,11 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 
+
 data class GameState(
     val isPlaying: Boolean = false,
     val score: Int = 0,
-    val playerX: Float = 0.5f, // Position
+    val playerX: Float = 0.5f,
     val isGameOver: Boolean = false,
     val survivalTime: Long = 0L,
     val obstaclesDodged: Int = 0,
@@ -41,21 +49,19 @@ data class GameState(
     val isPaused: Boolean = false,
     val currentCombo: Int = 0,
     val maxComboReached: Int = 0,
-
-    val currentWeapon: BulletType = BulletType.BASIC_LASER,
-
     val currentAmmo: Int = 50,
-
     val maxAmmo: Int = 50,
-
     val lastShotTime: Long = 0L,
-
     val obstaclesDestroyed: Int = 0,
+    val currentWeapon: Weapon = WeaponFactory.getBasicLaser(),
+    val unlockedWeapons: Set<WeaponType> = setOf(WeaponType.BASIC_LASER),
+    val credits: Int = 0
 )
 class GameViewModel(
      val soundManager: SoundManager? = null,
-    val hapticManager: HapticManager? = null
+     val hapticManager: HapticManager? = null
 ): ViewModel() {
+
     var gameState by mutableStateOf(GameState())
     private set
 
@@ -71,7 +77,11 @@ class GameViewModel(
     // Bullet list
     val bullets = mutableStateListOf<Bullet>()
 
+    // Power_Up list
+    val powerUps = mutableStateListOf<PowerUp>()
 
+    // shooting effects manager
+    val shootingEffectsManager = ShootingEffectsManager()
 
     // tracking dodged obstacles
     private val dodgedObstacleIds = mutableSetOf<Int>()
@@ -116,8 +126,17 @@ class GameViewModel(
         const val NEAR_MISS_BONUS = 25
         const val COMBO_MULTIPLIER = 10
         const val POINTS_PER_DESTROY = 15
-        const val FIRE_RATE_COOLDOWN = 300L
     }
+
+    // power up spawn timer
+    private var lastPowerUpSpawnTime = 0L
+    private val powerUpSpawnInterval = 15000L
+
+    // active weapon's fire-rate cooldown in milliseconds
+    private fun currentFireRateCooldown(): Long = gameState.currentWeapon.fireRate
+
+    // returns how much ammo the active weapon consumes per shot
+    private fun currentAmmoConsumption(): Int = gameState.currentWeapon.ammoConsumption
 
 
     fun setScreenSize (width: Float, height: Float) {
@@ -142,9 +161,11 @@ class GameViewModel(
             isPaused = false,
             currentCombo = 0,
             maxComboReached = 0,
-            currentWeapon = BulletType.BASIC_LASER,
             currentAmmo = 50,
             maxAmmo = 50,
+            currentWeapon = WeaponFactory.getBasicLaser(),
+            unlockedWeapons = gameState.unlockedWeapons,
+            credits = gameState.credits,
             lastShotTime = 0L,
             obstaclesDestroyed = 0
         )
@@ -203,12 +224,12 @@ class GameViewModel(
         val currentTime = System.currentTimeMillis()
 
         // has enough time passed since last shot?
-        if (currentTime - gameState.lastShotTime < FIRE_RATE_COOLDOWN) {
+        if (currentTime - gameState.lastShotTime < currentFireRateCooldown()) {
             return
         }
 
         // do we have ammo?
-        if (gameState.currentAmmo <= 0) {
+        if (gameState.currentAmmo < currentAmmoConsumption()) {
             // for later: add out of ammo sound later
             return
         }
@@ -217,50 +238,23 @@ class GameViewModel(
         val playerX = getPlayerPixelX()
         val playerY = screenHeight - PlayerRenderer.PLAYER_HEIGHT - 100f
 
-        // BULLETS BASED ON CURRENT WEAPON TYPE
-        when (gameState.currentWeapon) {
-            BulletType.BASIC_LASER -> {
-                val bullet = BulletFactory.createBasicLaser(playerX, playerY)
-                bullets.add(bullet)
-                // 1 ammo used
-                gameState = gameState.copy(
-                    currentAmmo = gameState.currentAmmo - 1,
-                    lastShotTime = currentTime
-                )
-            }
-            BulletType.RAPID_FIRE -> {
-                val bullet = BulletFactory.createRapidFire(playerX, playerY)
-                bullets.add(bullet)
-                // 1 ammo used
-                gameState = gameState.copy(
-                    currentAmmo = gameState.currentAmmo - 1,
-                    lastShotTime = currentTime
-                )
-            }
-            BulletType.SPREAD_SHOT -> {
-                val bullet = BulletFactory.createSpreadShotBullet(playerX, playerY)
-                bullets.add(bullet)
-                // 3 ammo used
-                gameState = gameState.copy(
-                    currentAmmo = gameState.currentAmmo - 3,
-                    lastShotTime = currentTime
-                )
-            }
-            BulletType.MISSILE -> {
-                val bullet = BulletFactory.createMissile(playerX, playerY)
-                bullets.add(bullet)
-                // 1 ammo used
-                gameState = gameState.copy(
-                    currentAmmo = gameState.currentAmmo - 2,
-                    lastShotTime = currentTime
-                )
-            } BulletType.PLASMA_CANNON -> {
-           // later
-        }
-        }
+        val newBullets = BulletFactory.createBulletsForWeapon(
+            gameState.currentWeapon,
+            playerX,
+            playerY
+        )
+        bullets.addAll(newBullets)
+
+
+        gameState = gameState.copy(
+            currentAmmo = gameState.currentAmmo - currentAmmoConsumption(),
+            lastShotTime = currentTime
+        )
 
         // spot for gun sound
+        soundManager?.playShoot()
         // spot for haptic feedback
+        hapticManager?.lightTap()
     }
 
     private fun startGameLoop() {
@@ -329,7 +323,7 @@ class GameViewModel(
 
                 gameState = gameState.copy(score = totalScore)
 
-                delay(100L) // Update every 100ms
+                delay(100L)
             }
         }
     }
@@ -364,12 +358,12 @@ class GameViewModel(
         checkNearMisses()
 
 
-        // Remove obstacles that are off screen
-        obstacles.removeAll {
-            val isOffScreen = it.y > screenHeight + 100f
+        // Remove obstacles that are off-screen
+        obstacles.removeAll { obstacle ->
+            val isOffScreen = obstacle.y > screenHeight + 100f
             if (isOffScreen) {
-                dodgedObstacleIds.remove(it.id)
-                nearMissedObstacleIds.remove(it.id)
+                dodgedObstacleIds.remove(obstacle.id)
+                nearMissedObstacleIds.remove(obstacle.id)
             }
             isOffScreen
         }
@@ -432,7 +426,7 @@ class GameViewModel(
                     hapticManager?.mediumVibration()
 
 
-                //  COMBO FLOATING TEXT (every 3rd dodge if combo > 3)
+                //  COMBO FLOATING TEXT
                 if (newCombo > 3 && newCombo % 3 == 0) {
                     val comboText = FloatingTextFactory.createComboText(
                         x = screenWidth / 2,
@@ -495,6 +489,104 @@ class GameViewModel(
             )
             obstacles.add(obstacle)
         }
+    }
+
+    private fun spawnPowerUps() {
+        val currentTime = System.currentTimeMillis()
+
+        // Only spawn power-ups every 15 seconds
+        if (currentTime - lastPowerUpSpawnTime < powerUpSpawnInterval)
+            return
+
+
+        lastPowerUpSpawnTime = currentTime
+
+        // Try to spawn a power-up (30% chance)
+        val powerUp = PowerUpFactory.createRandomPowerUp(screenWidth)
+        if (powerUp != null) {
+            powerUps.add(powerUp)
+        }
+    }
+
+    private fun updatePowerUps() {
+        // Move power-ups down
+        powerUps.forEach { powerUp ->
+            val index = powerUps.indexOf(powerUp)
+            if (index != -1) {
+                powerUps[index] = powerUp.copy(
+                    y = powerUp.y + powerUp.velocity
+                )
+            }
+        }
+
+        powerUps.removeAll { it.y > screenHeight + 100f }
+    }
+
+    private fun checkPowerUpCollisions() {
+        if (!gameState.isPlaying || gameState.isGameOver) return
+
+        val playerX = getPlayerPixelX()
+        val playerY = screenHeight - PlayerRenderer.PLAYER_HEIGHT - 100f
+
+        val powerUpsToRemove = mutableSetOf<Int>()
+
+        powerUps.forEach { powerUp ->
+            if (powerUp.isCollected) return@forEach
+
+            val powerUpPixelX = powerUp.x * screenWidth
+            val powerUpPixelY = powerUp.y
+
+            // Check collision with player
+            val distance = kotlin.math.sqrt(
+                (playerX - powerUpPixelX) * (playerX - powerUpPixelX) +
+                        (playerY - powerUpPixelY) * (playerY - powerUpPixelY)
+            )
+
+            if (distance < (PlayerRenderer.PLAYER_WIDTH / 2 + powerUp.size / 2)) {
+                // POWER-UP COLLECTED!
+                powerUpsToRemove.add(powerUp.id)
+
+                // Apply power-up effect
+                when (powerUp.type) {
+                    PowerUpType.AMMO_REFILL -> {
+                        refillAmmo(25)
+                        soundManager?.playPowerUp()
+                        hapticManager?.successVibration()
+                    }
+                    PowerUpType.AMMO_PACK -> {
+                        refillAmmo(50)
+                        soundManager?.playPowerUp()
+                        hapticManager?.successVibration()
+                    }
+                    PowerUpType.DOUBLE_DAMAGE -> {
+                        // TODO: Implement in future
+                    }
+                    PowerUpType.RAPID_FIRE -> {
+                        // TODO: Implement in future
+                    }
+                    else -> {}
+                }
+
+                // Floating text for collection
+                val text = when (powerUp.type) {
+                    PowerUpType.AMMO_REFILL -> "+25 AMMO"
+                    PowerUpType.AMMO_PACK -> "+50 AMMO!"
+                    PowerUpType.DOUBLE_DAMAGE -> "2X DAMAGE!"
+                    PowerUpType.RAPID_FIRE -> "RAPID FIRE!"
+                    else -> "POWER-UP!"
+                }
+
+                val collectionText = FloatingTextFactory.createComboText(
+                    x = powerUpPixelX,
+                    y = powerUpPixelY,
+                    combo = 0
+                )
+                floatingTextManager.addFloatingText(collectionText)
+            }
+        }
+
+        // Remove collected power-ups
+        powerUps.removeAll { powerUpsToRemove.contains(it.id) }
     }
 
     private fun checkCollisions() {
@@ -582,6 +674,8 @@ class GameViewModel(
         // To track which bullets and obstacles to remove
         val bulletsToRemove = mutableSetOf<Int>()
         val obstaclesToRemove = mutableSetOf<Int>()
+        val obstaclesToUpdate = mutableListOf<Pair<Int, Int>>()
+
 
         bullets.forEach { bullet ->
             obstacles.forEach{ obstacle ->
@@ -591,6 +685,11 @@ class GameViewModel(
                     return@forEach
 
             }
+
+                // if obstacle is not destructible
+                if (!obstacle.isDestructible) {
+                    return@forEach
+                }
 
             // Check collision between bullet and obstacle
             val obstaclePixelX = obstacle.x * screenWidth
@@ -607,49 +706,72 @@ class GameViewModel(
             )
 
             if (distance < (obstacleRadius + bullet.width)) {
-                // COLLISION DETECTED!
+                // COLLISION DETECTED
                 bulletsToRemove.add(bullet.id)
                 obstaclesToRemove.add(obstacle.id)
 
-                // Play explosion sound
-                soundManager?.playExplosion()
+                // reduce obstacle HP
+                val newHP = obstacle.currentHP - bullet.damage
 
-                // Create explosion at obstacle position
-                onExplosion?.invoke(obstaclePixelX, obstaclePixelY)
+                // hit effects
+                shootingEffectsManager.createHitSparks(obstaclePixelX, obstaclePixelY, 12)
+                shootingEffectsManager.createDamageNumber(obstaclePixelX, obstaclePixelY, bullet.damage)
 
                 // Light vibration for destruction
                 hapticManager?.lightTap()
 
-                // Award points for destruction
-                val destroyPoints = POINTS_PER_DESTROY
-                gameState = gameState.copy(
-                    score = gameState.score + destroyPoints,
-                    obstaclesDestroyed = gameState.obstaclesDestroyed + 1
-                )
+                if (newHP <= 0) {
+                    // OBSTACLE DESTROYED!
+                    obstaclesToRemove.add(obstacle.id)
 
-                // FLOATING TEXT for destruction
-                val destructionText = FloatingTextFactory.createScoreText(
-                    x = obstaclePixelX,
-                    y = obstaclePixelY,
-                    points = destroyPoints,
-                    combo = 0
-                )
-                floatingTextManager.addFloatingText(destructionText)
+                    // Play explosion sound
+                    soundManager?.playExplosion()
+
+                    // Create explosion
+                    onExplosion?.invoke(obstaclePixelX, obstaclePixelY)
+
+                    // Award points and credits
+                    val destroyPoints = obstacle.creditValue
+                    gameState = gameState.copy(
+                        score = gameState.score + destroyPoints,
+                        obstaclesDestroyed = gameState.obstaclesDestroyed + 1
+                    )
+
+                    // FLOATING TEXT for destruction
+                    val destructionText = FloatingTextFactory.createScoreText(
+                        x = obstaclePixelX,
+                        y = obstaclePixelY,
+                        points = destroyPoints,
+                        combo = 0
+                    )
+                    floatingTextManager.addFloatingText(destructionText)
+                } else {
+                    // Obstacle damaged but not destroyed
+                    obstaclesToUpdate.add(Pair(obstacle.id, newHP))
+                }
+            }
             }
         }
-    }
 
-    // Remove collided bullets and obstacles
+        // Remove collided bullets and obstacles
     bullets.removeAll { bulletsToRemove.contains(it.id) }
-    obstacles.removeAll { obstacle ->
-        val shouldRemove = obstaclesToRemove.contains(obstacle.id)
-        if (shouldRemove) {
-            // Clean up tracking sets
-            dodgedObstacleIds.remove(obstacle.id)
-            nearMissedObstacleIds.remove(obstacle.id)
+        // Update obstacle HP
+        obstaclesToUpdate.forEach { (obstacleId, newHP) ->
+            val index = obstacles.indexOfFirst { it.id == obstacleId }
+            if (index != -1) {
+                obstacles[index] = obstacles[index].copy(currentHP = newHP)
+            }
         }
-        shouldRemove
-    }
+
+        // Remove destroyed obstacles
+        obstacles.removeAll { obstacle ->
+            val shouldRemove = obstaclesToRemove.contains(obstacle.id)
+            if (shouldRemove) {
+                dodgedObstacleIds.remove(obstacle.id)
+                nearMissedObstacleIds.remove(obstacle.id)
+            }
+            shouldRemove
+        }
     }
     fun movePlayerLeft() {
         if (!gameState.isPlaying || gameState.isGameOver) return
@@ -669,6 +791,36 @@ class GameViewModel(
 
     fun restartGame() {
         startGame()
+    }
+
+    // weapon firing
+    fun fireBullets() {
+        if (!gameState.isPlaying || gameState.isGameOver || gameState.isPaused) return
+
+        val weapon = gameState.currentWeapon
+        val playerX = getPlayerPixelX()
+        val playerY = screenHeight - PlayerRenderer.PLAYER_HEIGHT - 100f
+
+        val newBullets = BulletFactory.createBulletsForWeapon(weapon, playerX, playerY)
+        bullets.addAll(newBullets)
+    }
+
+    // weapon switch
+    fun switchWeapon(weapon: Weapon) {
+        gameState = gameState.copy(currentWeapon = weapon)
+    }
+
+    // helper function for weapon types
+    fun changeWeapon(weaponType: WeaponType) {
+        if (!gameState.unlockedWeapons.contains(weaponType)) return
+
+        val newWeapon = when (weaponType) {
+            WeaponType.BASIC_LASER -> WeaponFactory.getBasicLaser()
+            WeaponType.RAPID_FIRE -> WeaponFactory.getRapidFire()
+            WeaponType.SPREAD_SHOT -> WeaponFactory.getSpreadShot()
+            WeaponType.MISSILE -> WeaponFactory.getMissile()
+            WeaponType.PLASMA_CANNON -> WeaponFactory.getPlasmaCannon()
+        }
     }
 
     // helper function for combo
@@ -741,11 +893,6 @@ class GameViewModel(
         gameState = gameState.copy(currentAmmo = newAmmo)
 
         soundManager?.playPowerUp()
-    }
-
-    // for later to change weapon after store unlocks
-    fun changeWeapon(weaponType: BulletType) {
-        gameState = gameState.copy(currentWeapon = weaponType)
     }
 
     override fun onCleared() {

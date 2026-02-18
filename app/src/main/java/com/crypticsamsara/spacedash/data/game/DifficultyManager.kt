@@ -36,7 +36,7 @@ object DifficultyManager {
     }
 
     // Obstacle speed multiplier, increases over time
-    // i.e obstacles are supposed to move faster
+    // i.e. obstacles are supposed to move faster
     fun getObstacleSpeed(survivalTimeMs: Long): Float {
         val multiplier = calculateDifficultyMultiplier(survivalTimeMs)
 

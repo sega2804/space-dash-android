@@ -117,7 +117,7 @@ fun GameOverScreen(
                 textAlign = TextAlign.Center,
             )
 
-            // Score card
+            // Scorecard
             Card(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -135,7 +135,7 @@ fun GameOverScreen(
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
                     // New High Score indicator
-                    if (score >= highScore && highScore > 0) {
+                    if (highScore in 1..score) {
                         Row(
                             verticalAlignment = Alignment.CenterVertically,
                             horizontalArrangement = Arrangement.Center,

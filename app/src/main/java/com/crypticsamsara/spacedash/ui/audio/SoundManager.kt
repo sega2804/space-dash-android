@@ -21,6 +21,8 @@ class SoundManager(private val context: Context) {
     private var dodgeSoundId: Int = 0
     private var clickSoundId: Int = 0
     private var powerUpSoundId: Int = 0
+    private var shootSoundId: Int = 0
+
 
     // Volume settings (0.0 to 2.0)
     var musicVolume: Float = 0.5f
@@ -45,20 +47,15 @@ class SoundManager(private val context: Context) {
     }
 
     private fun setupSoundPool() {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
-            val audioAttributes = AudioAttributes.Builder()
-                .setUsage(AudioAttributes.USAGE_GAME)
-                .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
-                .build()
+        val audioAttributes = AudioAttributes.Builder()
+            .setUsage(AudioAttributes.USAGE_GAME)
+            .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
+            .build()
 
-            soundPool = SoundPool.Builder()
-                .setMaxStreams(5) // Max 5 sounds playing simultaneously
-                .setAudioAttributes(audioAttributes)
-                .build()
-        } else {
-            @Suppress("DEPRECATION")
-            soundPool = SoundPool(5, AudioManager.STREAM_MUSIC, 0)
-        }
+        soundPool = SoundPool.Builder()
+            .setMaxStreams(5) // Max 5 sounds playing simultaneously
+            .setAudioAttributes(audioAttributes)
+            .build()
 
         // Load sound effects
         try {
@@ -66,6 +63,7 @@ class SoundManager(private val context: Context) {
             dodgeSoundId = soundPool?.load(context, R.raw.dodge, 1) ?: 0
             clickSoundId = soundPool?.load(context, R.raw.button_click, 1) ?: 0
             powerUpSoundId = soundPool?.load(context, R.raw.power_up, 1) ?: 0
+            shootSoundId = soundPool?.load(context, R.raw.shoot, 1) ?: 0
         } catch (e: Exception) {
             // Sounds not found - that's okay, we'll add them later
             println("Sound files not found: ${e.message}")
@@ -90,6 +88,11 @@ class SoundManager(private val context: Context) {
         }
     }
 
+    fun playShoot() {
+        if (areSoundEffectsEnabled && shootSoundId != 0) {
+            soundPool?.play(shootSoundId, soundEffectsVolume, soundEffectsVolume, 1, 0, 1f)
+        }
+    }
     fun playDodge() {
         if (areSoundEffectsEnabled && dodgeSoundId != 0) {
             soundPool?.play(dodgeSoundId, soundEffectsVolume, soundEffectsVolume, 1, 0, 1f)

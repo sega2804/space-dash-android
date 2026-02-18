@@ -34,7 +34,7 @@ object StarFactory {
                 star.position.y + star.speed
             )
 
-            // Wrap around when off screen
+            // Wrap around when off-screen
             if (star.position.y > height) {
                 star.position = Offset(
                     star.position.x,

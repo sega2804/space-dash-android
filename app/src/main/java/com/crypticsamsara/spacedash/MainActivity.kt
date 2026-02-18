@@ -13,12 +13,14 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.crypticsamsara.spacedash.ui.audio.SoundManager
 import com.crypticsamsara.spacedash.ui.haptics.HapticManager
 import com.crypticsamsara.spacedash.ui.screens.GameNavigation
 import com.crypticsamsara.spacedash.ui.screens.GameScreen
+import com.crypticsamsara.spacedash.ui.screens.HomeScreen
 import com.crypticsamsara.spacedash.ui.theme.SpaceDashTheme
 import com.crypticsamsara.spacedash.viewmodel.GameViewModel
 import com.crypticsamsara.spacedash.viewmodel.GameViewModelFactory
@@ -68,15 +70,19 @@ class MainActivity : ComponentActivity() {
     }
 }
 
-/*
-@Preview(showBackground = true)
+@Preview(showBackground = true, widthDp = 390, heightDp = 844)
 @Composable
-fun GreetingPreview() {
+fun GameNavigationPreview() {
+    val context = LocalContext.current
     SpaceDashTheme {
-        GameNavigation(
-            soundManager = SoundManager(MainActivity()),
-            hapticManager = HapticManager(MainActivity())
-        )
+        Surface(
+            modifier = Modifier.fillMaxSize(),
+            color = MaterialTheme.colorScheme.background
+        ) {
+            GameNavigation(
+                soundManager = SoundManager(context),
+                hapticManager = HapticManager(context)
+            )
+        }
     }
 }
- */

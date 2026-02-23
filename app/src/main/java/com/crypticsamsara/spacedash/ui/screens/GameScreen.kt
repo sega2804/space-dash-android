@@ -50,6 +50,7 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.crypticsamsara.spacedash.model.StarFactory
 import com.crypticsamsara.spacedash.ui.components.BulletRenderer
+import com.crypticsamsara.spacedash.ui.components.BulletRenderer.drawBullet
 import com.crypticsamsara.spacedash.ui.components.ComboDisplay
 import com.crypticsamsara.spacedash.ui.components.DifficultyIndicator
 import com.crypticsamsara.spacedash.ui.components.DifficultyLevelUpPopup
@@ -128,6 +129,8 @@ fun GameScreen (
             val canvasWidth = size.width
             val canvasHeight = size.height
 
+            val animationTime = System.currentTimeMillis() / 1000f
+
             // Starfield background (simple stars)
             stars.forEach { star ->
                 drawCircle(
@@ -143,8 +146,10 @@ fun GameScreen (
             }
 
             // bullets
-            with(BulletRenderer) {
-                drawBullets(bullets)
+            viewModel.bullets.forEach { bullets ->
+                with(BulletRenderer) {
+                    drawBullet(bullets, animationTime)
+                }
             }
 
             // Player

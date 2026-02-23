@@ -36,6 +36,7 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
+import kotlin.math.sqrt
 
 
 data class GameState(
@@ -230,7 +231,7 @@ class GameViewModel(
 
         // do we have ammo?
         if (gameState.currentAmmo < currentAmmoConsumption()) {
-            // for later: add out of ammo sound later
+            soundManager?.playNoAmmo()
             return
         }
 
@@ -656,16 +657,94 @@ class GameViewModel(
 
     private fun updateBullets() {
         // upward movement for bullets
-        bullets.forEach {bullet ->
-            val index = bullets.indexOf(bullet)
-            if (index != -1) {
-                bullets[index] = bullet.copy(
-                    y = bullet.y - bullet.velocity
+        bullets.forEachIndexed { index, bullet ->
+           if ( index >= bullets.size) return@forEachIndexed
+
+            when (bullet.bulletType) {
+                BulletType.SPREAD_SHOT -> {
+                    // bullet functions based on velocity mechanics
+                    bullets[index] = bullet.copy(
+                        x = bullet.x + bullet.velocityX,
+                        y = bullet.y - bullet.velocityY // negative gives upward direction
+                    )
+                }
+
+                BulletType.MISSILE -> {
+                    // homing mechanics
+                    val updateBullet = updateHomingMissile(bullet)
+                    if (index < bullets.size) {
+                        bullets[index] = updateBullet
+                    }
+                }
+
+                else -> {
+                    // standard upward movement for the remaining ammo
+                    if (index< bullets.size) {
+                        bullets[index] = bullet.copy(
+                            y = bullet.y - bullet.velocity
+                        )
+                    }
+                }
+            }
+        }
+
+        bullets.removeAll {
+            it.y < -50f  || it.x < -50f || it.x > screenWidth + 50f
+        }
+    }
+
+    private fun updateHomingMissile(missile: Bullet): Bullet {
+        val nearestObstacle = obstacles
+            .filter { it.isDestructible && it.y < screenHeight }
+            .minByOrNull { obstacle ->
+                val obstacleX = obstacle.x * screenWidth
+                val obstacleY = obstacle.y
+                val dx = obstacleX - missile.x
+                val dy = obstacleY - missile.y
+                sqrt(dx * dx + dy * dy)
+            }
+
+        if (nearestObstacle != null) {
+            val obstacleX = nearestObstacle.x * screenWidth
+            val obstacleY = nearestObstacle.y
+
+            // direction to obstacle
+            val dx = obstacleX - missile.x
+            val dy = obstacleY - missile.y
+            val distance= sqrt(dx * dx + dy * dy)
+
+            // only home if within range
+            if (distance < 300f && distance > 0) {
+                // Normalize direction
+                val dirX = dx / distance
+                val dirY = dy / distance
+
+                // Homing strength (0.15 = 15% adjustment toward target per frame)
+                val homingStrength = 0.15f
+
+                // Blend current velocity with target direction
+                val newVelX = missile.velocityX + (dirX * missile.velocity * homingStrength)
+                val newVelY = missile.velocityY + (dirY * missile.velocity * homingStrength)
+
+                // Normalize velocity to maintain speed
+                val velMagnitude = kotlin.math.sqrt(newVelX * newVelX + newVelY * newVelY)
+                val normalizedVelX = (newVelX / velMagnitude) * missile.velocity
+                val normalizedVelY = (newVelY / velMagnitude) * missile.velocity
+
+                return missile.copy(
+                    x = missile.x + normalizedVelX,
+                    y = missile.y + normalizedVelY,
+                    velocityX = normalizedVelX,
+                    velocityY = normalizedVelY,
+                    targetObstacleId = nearestObstacle.id
                 )
             }
         }
 
-        bullets.removeAll { it.y < -50f }
+         // default upward movement
+        return missile.copy(
+            y = missile.y - missile.velocity
+        )
     }
 
     private fun checkBulletCollisions() {
@@ -821,6 +900,11 @@ class GameViewModel(
             WeaponType.MISSILE -> WeaponFactory.getMissile()
             WeaponType.PLASMA_CANNON -> WeaponFactory.getPlasmaCannon()
         }
+
+        // update the weapon
+        gameState = gameState.copy(currentWeapon = newWeapon)
+
+        soundManager?.playClick()
     }
 
     // helper function for combo

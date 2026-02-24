@@ -1,4 +1,4 @@
-package com.crypticsamsara.spacedash.data
+package com.crypticsamsara.spacedash.data.game
 
 import android.content.Context
 import androidx.datastore.core.DataStore

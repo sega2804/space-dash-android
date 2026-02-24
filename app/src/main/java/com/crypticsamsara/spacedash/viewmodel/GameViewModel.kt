@@ -8,7 +8,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.graphics.Color
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.crypticsamsara.spacedash.data.PreferencesManager
+import com.crypticsamsara.spacedash.data.game.CreditsManager
 import com.crypticsamsara.spacedash.data.game.DifficultyManager
 import com.crypticsamsara.spacedash.model.Bullet
 import com.crypticsamsara.spacedash.model.BulletFactory
@@ -31,7 +31,6 @@ import com.crypticsamsara.spacedash.ui.effects.ScreenShakeController
 import com.crypticsamsara.spacedash.ui.effects.ShootingEffectsManager
 import com.crypticsamsara.spacedash.ui.haptics.HapticManager
 import com.crypticsamsara.spacedash.utils.CollisionDetector
-import com.crypticsamsara.spacedash.utils.CollisionDetector.checkNearMiss
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
@@ -56,11 +55,13 @@ data class GameState(
     val obstaclesDestroyed: Int = 0,
     val currentWeapon: Weapon = WeaponFactory.getBasicLaser(),
     val unlockedWeapons: Set<WeaponType> = setOf(WeaponType.BASIC_LASER),
-    val credits: Int = 0
+    val credits: Int = 0,
+    val creditsEarned: Int = 0
 )
 class GameViewModel(
      val soundManager: SoundManager? = null,
-     val hapticManager: HapticManager? = null
+     val hapticManager: HapticManager? = null,
+    val creditsManager: CreditsManager? = null
 ): ViewModel() {
 
     var gameState by mutableStateOf(GameState())
@@ -167,6 +168,7 @@ class GameViewModel(
             currentWeapon = WeaponFactory.getBasicLaser(),
             unlockedWeapons = gameState.unlockedWeapons,
             credits = gameState.credits,
+            creditsEarned = 0,
             lastShotTime = 0L,
             obstaclesDestroyed = 0
         )
@@ -272,7 +274,7 @@ class GameViewModel(
 
     private fun startObstacleSpawner() {
         spawnJob?.cancel()
-        spawnJob = viewModelScope.launch {
+        spawnJob =  viewModelScope.launch {
             while (isActive && gameState.isPlaying) {
                 // spawn if not paused
                 if (!gameState.isPaused) {
@@ -635,10 +637,23 @@ class GameViewModel(
             sessionHighScore = gameState.score
         }
 
+        // credits earned
+        val creditsEarned = creditsManager?.calculateCreditsEarned(
+            obstaclesDestroyed = gameState.obstaclesDestroyed,
+            finalScore = gameState.score,
+            survivalTime = gameState.survivalTime
+        ) ?: 0
+
+        // award credits
+        viewModelScope.launch {
+            creditsManager?.addCredits(creditsEarned)
+        }
+
        gameState = gameState.copy(
             isPlaying = false,
             isGameOver = true,
-            highScore = sessionHighScore
+            highScore = sessionHighScore,
+           creditsEarned = creditsEarned
         )
 
         // Stop music
@@ -811,6 +826,13 @@ class GameViewModel(
 
                     // Award points and credits
                     val destroyPoints = obstacle.creditValue
+
+                    // credits update
+                    val instantCredits = CreditsManager.CREDITS_PER_OBSTACLE
+                    viewModelScope.launch {
+                        creditsManager?.addCredits(instantCredits)
+                    }
+
                     gameState = gameState.copy(
                         score = gameState.score + destroyPoints,
                         obstaclesDestroyed = gameState.obstaclesDestroyed + 1
@@ -955,6 +977,21 @@ class GameViewModel(
         return String.format("%02d:%02d", minutes, remainingSeconds)
     }
 
+    fun loadCredits() {
+        viewModelScope.launch {
+            creditsManager?.creditsFlow?.collect { credits ->
+                gameState = gameState.copy(credits = credits)
+            }
+        }
+    }
+
+    fun getCreditsBreakdown(): CreditsManager.CreditsBreakdown? {
+        return creditsManager?.getCreditsBreakdown(
+            obstaclesDestroyed = gameState.obstaclesDestroyed,
+            finalScore = gameState.score,
+            survivalTime = gameState.survivalTime
+        )
+    }
     fun onButtonClick() {
         soundManager?.playClick()
         hapticManager?.lightTap()

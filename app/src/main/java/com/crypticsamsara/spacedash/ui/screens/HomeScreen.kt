@@ -11,6 +11,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -23,6 +24,8 @@ import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -31,19 +34,29 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.crypticsamsara.spacedash.data.game.CreditsManager
+import com.crypticsamsara.spacedash.data.game.PreferencesManager
+import com.crypticsamsara.spacedash.ui.audio.SoundManager
+import com.crypticsamsara.spacedash.ui.haptics.HapticManager
 import com.crypticsamsara.spacedash.ui.theme.NeonCyan
 import com.crypticsamsara.spacedash.ui.theme.NeonPurple
 import com.crypticsamsara.spacedash.ui.theme.SpaceBlack
 import com.crypticsamsara.spacedash.ui.theme.SpaceBlue
+import com.crypticsamsara.spacedash.ui.theme.SpaceDashTheme
 import com.crypticsamsara.spacedash.ui.theme.StarWhite
 
 @Composable
 fun HomeScreen(
     highScore: Int,
+    currentCredits: Int,
     onStartGame: () -> Unit,
+    onOpenStore: () -> Unit
 ) {
     // Pulsing animation for title
     val infiniteTransition = rememberInfiniteTransition(label = "pulse")
@@ -84,7 +97,8 @@ fun HomeScreen(
         Column(
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center,
-            modifier = Modifier.padding(32.dp)
+            modifier = Modifier.padding(24.dp)
+                .fillMaxSize()
         ) {
             // Animated game title
             Text(
@@ -122,31 +136,23 @@ fun HomeScreen(
                 Spacer(modifier = Modifier.height(32.dp))
             }
 
-            // Play button
-            Button(
+            // Start Game Button
+            MenuButton(
+                text = "START GAME",
                 onClick = onStartGame,
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = NeonCyan
-                ),
-                modifier = Modifier
-                    .fillMaxWidth(0.7f)
-                    .height(70.dp),
-                shape = RoundedCornerShape(16.dp)
-            ) {
-                Icon(
-                    imageVector = Icons.Default.PlayArrow,
-                    contentDescription = "Play",
-                    tint = SpaceBlack,
-                    modifier = Modifier.size(32.dp)
-                )
-                Spacer(modifier = Modifier.size(8.dp))
-                Text(
-                    text = "START GAME",
-                    fontSize = 24.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = SpaceBlack
-                )
-            }
+                icon = "🚀",
+                color = Color(0xFF00F0FF)
+            )
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            // Store Button
+            MenuButton(
+                text = "WEAPON STORE",
+                onClick = onOpenStore,
+                icon = "🛒",
+                color = Color(0xFFFFD700)
+            )
 
             Spacer(modifier = Modifier.height(24.dp))
 
@@ -179,6 +185,73 @@ fun HomeScreen(
                     fontSize = 12.sp
                 )
             }
+        }
+        CreditsDisplay(
+            credits = currentCredits,
+            large = true,
+            modifier = Modifier.align(Alignment.TopEnd)
+                .padding(16.dp)
+        )
+    }
+}
+
+@Composable
+private fun MenuButton(
+    text: String,
+    onClick: () -> Unit,
+    icon: String,
+    color: Color
+) {
+    Button(
+        onClick = onClick,
+        modifier = Modifier
+            .fillMaxWidth(0.75f)
+            .height(64.dp),
+        colors = ButtonDefaults.buttonColors(
+            containerColor = color
+        ),
+        shape = RoundedCornerShape(16.dp),
+        elevation = ButtonDefaults.buttonElevation(
+            defaultElevation = 8.dp,
+            pressedElevation = 4.dp
+        )
+    ) {
+        Row(
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                text = icon,
+                fontSize = 28.sp
+            )
+            Text(
+                text = text,
+                fontSize = 20.sp,
+                fontWeight = FontWeight.Bold,
+                color = Color.Black
+            )
+        }
+    }
+}
+
+@Preview(showBackground = true)
+@Composable
+fun HomeScreenPreview() {
+    val context = LocalContext.current
+    SpaceDashTheme {
+        Surface(
+            modifier = Modifier.fillMaxSize(),
+            color = MaterialTheme.colorScheme.background
+        ) {
+            HomeScreen(
+                highScore = 800,
+                currentCredits = 98,
+                // FIX: Pass empty lambdas for the onStartGame and onOpenStore parameters.
+                // The original code was passing `()` and `null`, which are not valid
+                // values for a parameter of type `() -> Unit`.
+                onStartGame = {},
+                onOpenStore = {}
+            )
         }
     }
 }

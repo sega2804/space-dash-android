@@ -18,6 +18,7 @@ import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowLeft
@@ -31,6 +32,7 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -408,71 +410,78 @@ fun GameScreen (
                 modifier = Modifier
                     .fillMaxWidth()
                     .align(Alignment.BottomCenter)
-                    .padding(bottom = 40.dp),
-                horizontalArrangement = Arrangement.SpaceEvenly
+                    .padding(16.dp),
+                horizontalArrangement = Arrangement.SpaceBetween
             ) {
-
+                // Control buttons
                 // Left button
-                Button(
-                    onClick = {
-                        viewModel.onButtonClick()
-                        viewModel.movePlayerLeft()
-                    },
-                    modifier = Modifier.size(80.dp),
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = NeonCyan.copy(alpha = 0.3f)
-                    )
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
-                    Icon(
-                        imageVector = Icons.AutoMirrored.Filled.KeyboardArrowLeft,
-                        contentDescription = "Move Left",
-                        tint = StarWhite,
-                        modifier = Modifier.size(40.dp)
-                    )
-                }
-
-                // shoot button
-                Button(
-                    onClick = {
-                        viewModel.onButtonClick()
-                        viewModel.shootBullet()
-                    },
-                    modifier = Modifier.size(60.dp),
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = if (gameState.currentAmmo > 0)
-                            DangerRed.copy(alpha = 0.5f)
-                        else
-                            Color.Gray.copy(alpha = 0.3f)
-                    ),
-                    enabled = gameState.currentAmmo > 0
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.Bolt,
-                        contentDescription = "Shoot",
-                        tint = if (gameState.currentAmmo > 0) StarWhite else Color.Gray,
-                        modifier = Modifier.size(40.dp)
-                    )
+                    IconButton(
+                        onClick = {
+                            viewModel.onButtonClick()
+                            viewModel.movePlayerLeft()
+                        },
+                        modifier = Modifier
+                            .size(64.dp)
+                            .background(
+                                Color.White.copy(alpha = 0.2f),
+                                CircleShape
+                            )
+                    ) {
+                        Text("←", fontSize = 32.sp, color = Color.White)
+                    }
 
                     // Right button
-                    Button(
+                    IconButton(
                         onClick = {
                             viewModel.onButtonClick()
                             viewModel.movePlayerRight()
                         },
-                        modifier = Modifier.size(80.dp),
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = NeonCyan.copy(alpha = 0.3f)
-                        ),
+                        modifier = Modifier
+                            .size(64.dp)
+                            .background(
+                                Color.White.copy(alpha = 0.2f),
+                                CircleShape
+                            )
                     ) {
-                        Icon(
-                            imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
-                            contentDescription = "Move Right",
-                            tint = StarWhite,
-                            modifier = Modifier.size(40.dp)
-                        )
+                        Text("→", fontSize = 32.sp, color = Color.White)
                     }
                 }
+
+                // shoot button
+                IconButton(
+                    onClick = {
+                        viewModel.onButtonClick()
+                        viewModel.shootBullet()
+                    },
+                    modifier = Modifier
+                        .size(60.dp)
+                        .background(
+                            Color.Red.copy(alpha = 0.3f),
+                            CircleShape
+                        ),
+                    enabled = gameState.currentAmmo > 0
+                ) {
+                    Text("🔫", fontSize = 36.sp)
+                }
             }
+        }
+    }
+}
+
+@androidx.compose.ui.tooling.preview.Preview(showBackground = true)
+@Composable
+fun GameScreenPreview() {
+    com.crypticsamsara.spacedash.ui.theme.SpaceDashTheme {
+        Surface(modifier = Modifier.fillMaxSize(), color = SpaceBlack) {
+            GameScreen(
+                // Note: If your ViewModel has a complex constructor,
+                // you may need to create a MockViewModel or use a State-hoisting pattern.
+                viewModel = viewModel(),
+                onBackToHome = {}
+            )
         }
     }
 }

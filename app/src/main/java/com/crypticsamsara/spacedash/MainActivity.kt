@@ -16,6 +16,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.crypticsamsara.spacedash.data.game.CreditsManager
+import com.crypticsamsara.spacedash.data.game.PreferencesManager
 import com.crypticsamsara.spacedash.ui.audio.SoundManager
 import com.crypticsamsara.spacedash.ui.haptics.HapticManager
 import com.crypticsamsara.spacedash.ui.screens.GameNavigation
@@ -37,6 +39,8 @@ class MainActivity : ComponentActivity() {
         // Start soundManager
         soundManager = SoundManager(this)
         hapticManager = HapticManager(this)
+        val creditsManager = CreditsManager(this)
+        val preferencesManager = PreferencesManager(this)
 
         setContent {
             SpaceDashTheme {
@@ -47,7 +51,9 @@ class MainActivity : ComponentActivity() {
                     // create viewmodel with soundManager
                     GameNavigation(
                         soundManager = soundManager,
-                        hapticManager = hapticManager
+                        hapticManager = hapticManager,
+                        creditsManager = creditsManager,
+                        preferencesManager = preferencesManager
                     )
                 }
             }
@@ -81,7 +87,9 @@ fun GameNavigationPreview() {
         ) {
             GameNavigation(
                 soundManager = SoundManager(context),
-                hapticManager = HapticManager(context)
+                hapticManager = HapticManager(context),
+                creditsManager = CreditsManager(context),
+                preferencesManager = PreferencesManager(context)
             )
         }
     }

@@ -10,6 +10,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.crypticsamsara.spacedash.data.game.CreditsManager
 import com.crypticsamsara.spacedash.data.game.DifficultyManager
+import com.crypticsamsara.spacedash.data.game.PreferencesManager
 import com.crypticsamsara.spacedash.model.Bullet
 import com.crypticsamsara.spacedash.model.BulletFactory
 import com.crypticsamsara.spacedash.model.BulletType
@@ -61,7 +62,8 @@ data class GameState(
 class GameViewModel(
      val soundManager: SoundManager? = null,
      val hapticManager: HapticManager? = null,
-    val creditsManager: CreditsManager? = null
+    val creditsManager: CreditsManager? = null,
+    val preferencesManager: PreferencesManager? = null
 ): ViewModel() {
 
     var gameState by mutableStateOf(GameState())
@@ -992,6 +994,59 @@ class GameViewModel(
             survivalTime = gameState.survivalTime
         )
     }
+
+    fun purchaseWeapon(weapon: Weapon): Boolean {
+        // Check if already unlocked
+        if (gameState.unlockedWeapons.contains(weapon.type)) {
+            soundManager?.playError()
+            return false
+        }
+
+        // Check if enough credits
+        if (gameState.credits < weapon.cost) {
+            soundManager?.playError()
+            hapticManager?.strongVibration()
+            return false
+        }
+
+        // Attempt to spend credits
+        viewModelScope.launch {
+            val success = creditsManager?.spendCredits(weapon.cost)
+
+            if (success == true) {
+                // Add weapon to unlocked set
+                val newUnlockedWeapons = gameState.unlockedWeapons + weapon.type
+
+                // Update game state
+                gameState = gameState.copy(
+                    unlockedWeapons = newUnlockedWeapons,
+                    credits = gameState.credits - weapon.cost
+                )
+
+                // Success feedback
+                soundManager?.playSuccess()
+                hapticManager?.successVibration()
+
+                // Auto-equip new weapon
+                changeWeapon(weapon.type)
+            }
+        }
+
+        return true
+    }
+
+    fun canAffordWeapon(weapon: Weapon): Boolean {
+        return gameState.credits >= weapon.cost
+    }
+
+    fun getWeaponUnlockProgress(weapon: Weapon): Float {
+        if (gameState.unlockedWeapons.contains(weapon.type)) {
+            return 1f
+        }
+        return (gameState.credits.toFloat() / weapon.cost.toFloat()).coerceIn(0f, 1f)
+    }
+
+
     fun onButtonClick() {
         soundManager?.playClick()
         hapticManager?.lightTap()

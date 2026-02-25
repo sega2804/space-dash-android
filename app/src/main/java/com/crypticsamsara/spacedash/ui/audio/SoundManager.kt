@@ -22,8 +22,9 @@ class SoundManager(private val context: Context) {
     private var clickSoundId: Int = 0
     private var powerUpSoundId: Int = 0
     private var shootSoundId: Int = 0
-
     private var noAmmoId: Int = 0
+    private var successId: Int = 0
+    private var errorId: Int = 0
 
 
     // Volume settings (0.0 to 2.0)
@@ -67,6 +68,8 @@ class SoundManager(private val context: Context) {
             powerUpSoundId = soundPool?.load(context, R.raw.power_up, 1) ?: 0
             shootSoundId = soundPool?.load(context, R.raw.shoot, 1) ?: 0
             noAmmoId = soundPool?.load(context, R.raw.noammo,1) ?: 0
+            successId = soundPool?.load(context, R.raw.success, 1) ?: 0
+            errorId = soundPool?.load(context, R.raw.error, 1) ?: 0
         } catch (e: Exception) {
             // Sounds not found - that's okay, we'll add them later
             println("Sound files not found: ${e.message}")
@@ -120,6 +123,20 @@ class SoundManager(private val context: Context) {
             soundPool?.play(powerUpSoundId, soundEffectsVolume, soundEffectsVolume, 1, 0, 1f)
         }
     }
+
+    fun playSuccess() {
+        if (areSoundEffectsEnabled && successId != 0) {
+            soundPool?.play(successId, soundEffectsVolume, soundEffectsVolume, 1, 0, 1f)
+        }
+    }
+
+    fun playError() {
+        if (areSoundEffectsEnabled && errorId != 0) {
+            soundPool?.play(errorId, soundEffectsVolume, soundEffectsVolume, 1, 0, 1f)
+        }
+    }
+
+
 
     // Music controls
     fun startMusic() {

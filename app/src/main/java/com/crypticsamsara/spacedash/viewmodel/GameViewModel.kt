@@ -915,7 +915,11 @@ class GameViewModel(
 
     // helper function for weapon types
     fun changeWeapon(weaponType: WeaponType) {
-        if (!gameState.unlockedWeapons.contains(weaponType)) return
+        if (!gameState.unlockedWeapons.contains(weaponType)) {
+
+                soundManager?.playError()
+                return
+            }
 
         val newWeapon = when (weaponType) {
             WeaponType.BASIC_LASER -> WeaponFactory.getBasicLaser()
@@ -929,6 +933,7 @@ class GameViewModel(
         gameState = gameState.copy(currentWeapon = newWeapon)
 
         soundManager?.playClick()
+        hapticManager?.lightTap()
     }
 
     // helper function for combo

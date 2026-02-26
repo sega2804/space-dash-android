@@ -82,6 +82,7 @@ fun GameNavigation(
                 },
                 onWeaponSelected = { weapon ->
                     viewModel.changeWeapon(weapon.type)
+                    viewModel.onButtonClick()
                 }
             )
         }

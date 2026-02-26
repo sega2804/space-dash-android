@@ -406,18 +406,39 @@ fun GameScreen (
 
         // Control buttons at bottom
         if (gameState.isPlaying && !gameState.isGameOver && !gameState.isPaused) {
-            Row(
+            Column (
                 modifier = Modifier
                     .fillMaxWidth()
                     .align(Alignment.BottomCenter)
-                    .padding(16.dp),
-                horizontalArrangement = Arrangement.SpaceBetween
+                    .padding(16.dp)
             ) {
                 // Control buttons
-                // Left button
-                Row(
-                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                // shoot button at the top
+                IconButton(
+                    onClick = {
+                        viewModel.onButtonClick()
+                        viewModel.shootBullet()
+                    },
+                    modifier = Modifier
+                        .size(72.dp)
+                        .align(Alignment.CenterHorizontally)
+                        .background(
+                            Color.Red.copy(alpha = 0.3f),
+                            CircleShape
+                        ),
+                    enabled = gameState.currentAmmo > 0
                 ) {
+                    Text("🔫", fontSize = 36.sp)
+                }
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                // movement buttons at the bottom
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceEvenly
+                ) {
+                    // Left button
                     IconButton(
                         onClick = {
                             viewModel.onButtonClick()
@@ -448,23 +469,6 @@ fun GameScreen (
                     ) {
                         Text("→", fontSize = 32.sp, color = Color.White)
                     }
-                }
-
-                // shoot button
-                IconButton(
-                    onClick = {
-                        viewModel.onButtonClick()
-                        viewModel.shootBullet()
-                    },
-                    modifier = Modifier
-                        .size(60.dp)
-                        .background(
-                            Color.Red.copy(alpha = 0.3f),
-                            CircleShape
-                        ),
-                    enabled = gameState.currentAmmo > 0
-                ) {
-                    Text("🔫", fontSize = 36.sp)
                 }
             }
         }

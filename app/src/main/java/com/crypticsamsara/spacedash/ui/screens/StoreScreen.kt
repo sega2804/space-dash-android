@@ -20,13 +20,14 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.crypticsamsara.spacedash.model.Weapon
 import com.crypticsamsara.spacedash.model.WeaponFactory
 import com.crypticsamsara.spacedash.model.WeaponType
-import com.crypticsamsara.spacedash.ui.screens.CreditsDisplay
-import com.crypticsamsara.spacedash.ui.screens.CreditsInsufficientWarning
+import com.crypticsamsara.spacedash.ui.theme.SpaceDashTheme
 import kotlinx.coroutines.delay
 
 @Composable
@@ -60,7 +61,7 @@ fun StoreScreen(
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(16.dp)
+                .padding(20.dp)
         ) {
             // Header
             StoreHeader(
@@ -68,7 +69,7 @@ fun StoreScreen(
                 onBackPressed = onBackPressed
             )
 
-            Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(24.dp))
 
             // Title
             Text(
@@ -81,16 +82,16 @@ fun StoreScreen(
 
             Text(
                 text = "Upgrade your arsenal",
-                fontSize = 16.sp,
+                fontSize = 14.sp,
                 color = Color.Gray,
                 modifier = Modifier.align(Alignment.CenterHorizontally)
             )
 
-            Spacer(modifier = Modifier.height(24.dp))
+            Spacer(modifier = Modifier.height(32.dp))
 
             // Weapons List
             LazyColumn(
-                verticalArrangement = Arrangement.spacedBy(12.dp),
+                verticalArrangement = Arrangement.spacedBy(16.dp),
                 modifier = Modifier.weight(1f)
             ) {
                 items(allWeapons) { weapon ->
@@ -127,7 +128,7 @@ fun StoreScreen(
                 current = currentCredits,
                 modifier = Modifier
                     .align(Alignment.Center)
-                    .padding(24.dp)
+                    .padding(32.dp)
             )
 
             LaunchedEffect(Unit) {
@@ -154,7 +155,8 @@ private fun StoreHeader(
             colors = ButtonDefaults.buttonColors(
                 containerColor = Color.DarkGray
             ),
-            shape = RoundedCornerShape(12.dp)
+            shape = RoundedCornerShape(12.dp),
+            contentPadding = PaddingValues(horizontal = 16.dp, vertical = 12.dp)
         ) {
             Text(
                 text = "← BACK",
@@ -188,16 +190,16 @@ private fun WeaponStoreCard(
         label = "card_scale"
     )
 
-    Box(
+    Column(
         modifier = Modifier
             .fillMaxWidth()
             .scale(scale)
-            .clip(RoundedCornerShape(16.dp))
+            .clip(RoundedCornerShape(20.dp))
             .background(
                 brush = if (isUnlocked) {
                     Brush.horizontalGradient(
                         colors = listOf(
-                            weapon.bulletColor.copy(alpha = 0.2f),
+                            weapon.bulletColor.copy(alpha = 0.15f),
                             Color.Black.copy(alpha = 0.8f)
                         )
                     )
@@ -213,26 +215,22 @@ private fun WeaponStoreCard(
             .border(
                 width = if (isSelected) 3.dp else 1.dp,
                 color = if (isUnlocked) weapon.bulletColor else Color.Gray,
-                shape = RoundedCornerShape(16.dp)
+                shape = RoundedCornerShape(20.dp)
             )
             .clickable(onClick = onClick)
-            .padding(16.dp)
+            .padding(20.dp),
+        verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
+        // Top: Icon and name
         Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
+            horizontalArrangement = Arrangement.spacedBy(16.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier.fillMaxWidth()
         ) {
-            // Left: Icon, Name, Description
-            Row(
-                horizontalArrangement = Arrangement.spacedBy(16.dp),
-                verticalAlignment = Alignment.CenterVertically,
-                modifier = Modifier.weight(1f)
-            ) {
                 // Weapon Icon
                 Box(
                     modifier = Modifier
-                        .size(64.dp)
+                        .size(72.dp)
                         .clip(CircleShape)
                         .background(
                             if (isUnlocked) {
@@ -245,15 +243,15 @@ private fun WeaponStoreCard(
                 ) {
                     Text(
                         text = weapon.icon,
-                        fontSize = 32.sp,
-                        modifier = Modifier.scale(if (isUnlocked) 1f else 0.5f)
+                        fontSize = 36.sp,
+                        modifier = Modifier.scale(if (isUnlocked) 1f else 0.6f)
                     )
 
                     // Lock overlay
                     if (!isUnlocked) {
                         Text(
                             text = "🔒",
-                            fontSize = 24.sp,
+                            fontSize = 28.sp,
                             modifier = Modifier.align(Alignment.Center)
                         )
                     }
@@ -261,126 +259,138 @@ private fun WeaponStoreCard(
 
                 // Weapon Info
                 Column(
-                    verticalArrangement = Arrangement.spacedBy(4.dp)
+                    modifier = Modifier.weight(1f),
+                    verticalArrangement = Arrangement.spacedBy(6.dp)
                 ) {
                     Text(
                         text = weapon.name,
-                        fontSize = 18.sp,
+                        fontSize = 20.sp,
                         fontWeight = FontWeight.Bold,
                         color = if (isUnlocked) Color.White else Color.Gray
                     )
 
-                    Text(
-                        text = weapon.description,
-                        fontSize = 12.sp,
-                        color = if (isUnlocked) Color.LightGray else Color.DarkGray,
-                        lineHeight = 16.sp
-                    )
-
-                    // Stats
+                    // Status Badge
                     if (isUnlocked) {
-                        Row(
-                            horizontalArrangement = Arrangement.spacedBy(12.dp),
-                            modifier = Modifier.padding(top = 4.dp)
+                        Box(
+                            modifier = Modifier
+                                .background(
+                                    Color.Green.copy(alpha = 0.2f),
+                                    shape = RoundedCornerShape(6.dp)
+                                )
+                                .padding(horizontal = 10.dp, vertical = 4.dp),
                         ) {
-                            StatChip(
-                                label = "DMG",
-                                value = weapon.damage.toString(),
-                                color = Color(0xFFFF6B35)
-                            )
-                            StatChip(
-                                label = "RATE",
-                                value = "${1000 / weapon.fireRate}/s",
-                                color = Color(0xFF00F0FF)
-                            )
-                            StatChip(
-                                label = "AMMO",
-                                value = weapon.ammoConsumption.toString(),
-                                color = Color(0xFFBF40BF)
+                            Text(
+                                text = "✓ UNLOCKED",
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = Color.Green
                             )
                         }
                     }
                 }
             }
 
-            // Right: Price or Status
-            Column(
-                horizontalAlignment = Alignment.End,
-                verticalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                if (isUnlocked) {
-                    // Unlocked Badge
-                    Box(
-                        modifier = Modifier
-                            .background(
-                                Color.Green.copy(alpha = 0.3f),
-                                shape = RoundedCornerShape(8.dp)
-                            )
-                            .padding(horizontal = 12.dp, vertical = 6.dp)
-                    ) {
-                        Text(
-                            text = "✓ UNLOCKED",
-                            fontSize = 12.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = Color.Green
-                        )
-                    }
+            // Middle: Description
+            Text(
+                text = weapon.description,
+                fontSize = 13.sp,
+                color = if (isUnlocked) Color.LightGray else Color.DarkGray,
+                lineHeight = 18.sp,
+                maxLines = 3,
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.fillMaxWidth()
+            )
 
-                    // Equip button
-                    Button(
-                        onClick = onClick,
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = weapon.bulletColor
-                        ),
-                        shape = RoundedCornerShape(8.dp),
-                        modifier = Modifier.height(36.dp)
-                    ) {
-                        Text(
-                            text = "EQUIP",
-                            fontSize = 12.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = Color.Black
-                        )
-                    }
-                } else {
-                    // Price
-                    Column(
-                        horizontalAlignment = Alignment.End
-                    ) {
+            // Bottom: Stats or Price + button
+            if (isUnlocked) {
+                // Unlocked Badge
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    StatChip(
+                        label = "DAMAGE",
+                        value = weapon.damage.toString(),
+                        color = Color(0xFFFF6B35)
+                    )
+                    StatChip(
+                        label = "RATE",
+                        value = "${1000 / weapon.fireRate}/s",
+                        color = Color(0xFF00F0FF)
+                    )
+                    StatChip(
+                        label = "AMMO",
+                        value = "${weapon.ammoConsumption}/shot",
+                        color = Color(0xFFBF40BF)
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(4.dp))
+
+                // Equip button
+                Button(
+                    onClick = onClick,
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = weapon.bulletColor
+                    ),
+                    shape = RoundedCornerShape(12.dp),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(48.dp)
+                ) {
+                    Text(
+                        text = "⚡ EQUIP WEAPON",
+                        fontSize = 16.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = Color.Black
+                    )
+                }
+            } else {
+                // Price
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    // Price Display
+                    Column {
                         Text(
                             text = "COST",
-                            fontSize = 10.sp,
+                            fontSize = 11.sp,
                             color = Color.Gray
                         )
                         Row(
                             verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(4.dp)
+                            horizontalArrangement = Arrangement.spacedBy(6.dp)
                         ) {
                             Text(
                                 text = "💰",
-                                fontSize = 20.sp
+                                fontSize = 24.sp
                             )
                             Text(
                                 text = weapon.cost.toString(),
-                                fontSize = 24.sp,
+                                fontSize = 28.sp,
                                 fontWeight = FontWeight.Bold,
                                 color = Color(0xFFFFD700)
                             )
                         }
                     }
 
-                    // Purchase button
+                    // Purchase Button
                     Button(
                         onClick = onClick,
+                        modifier = Modifier
+                            .weight(1f)
+                            .padding(start = 16.dp)
+                            .height(48.dp),
                         colors = ButtonDefaults.buttonColors(
                             containerColor = Color(0xFFFFD700)
                         ),
-                        shape = RoundedCornerShape(8.dp),
-                        modifier = Modifier.height(36.dp)
+                        shape = RoundedCornerShape(12.dp)
                     ) {
                         Text(
-                            text = "PURCHASE",
-                            fontSize = 12.sp,
+                            text = "🛒 PURCHASE",
+                            fontSize = 16.sp,
                             fontWeight = FontWeight.Bold,
                             color = Color.Black
                         )
@@ -389,40 +399,37 @@ private fun WeaponStoreCard(
             }
         }
     }
-}
-
 @Composable
 private fun StatChip(
     label: String,
     value: String,
     color: Color
 ) {
-    Box(
+    Column(
         modifier = Modifier
             .background(
-                color.copy(alpha = 0.2f),
-                shape = RoundedCornerShape(4.dp)
+                color.copy(alpha = 0.15f),
+                shape = RoundedCornerShape(8.dp)
             )
-            .padding(horizontal = 6.dp, vertical = 3.dp)
+            .padding(horizontal = 12.dp, vertical = 8.dp),
+        horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        Row(
-            horizontalArrangement = Arrangement.spacedBy(4.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Text(
-                text = label,
-                fontSize = 10.sp,
-                color = Color.White
-            )
-            Text(
-                text = value,
-                fontSize = 10.sp,
-                fontWeight = FontWeight.Bold,
-                color = color
-            )
-        }
+        Text(
+            text = label,
+            fontSize = 10.sp,
+            color = Color.Gray,
+            fontWeight = FontWeight.Bold
+        )
+        Text(
+            text = value,
+            fontSize = 14.sp,
+            fontWeight = FontWeight.Bold,
+            color = color
+        )
     }
 }
+
+
 
  // Simple Store Preview - Compact version for testing
 
@@ -459,4 +466,55 @@ fun StorePreview(
             }
         }
     }
+}
+
+@Preview(showBackground = true, backgroundColor = 0xFF1A1A2E)
+@Composable
+fun StorePreviewPreview() {
+    val sampleWeapons = listOf(
+        Weapon(
+            type = WeaponType.BASIC_LASER,
+            name = "Laser",
+            icon = "🔫",
+            cost = 100,
+            description = "Basic laser",
+            damage = 1,
+            fireRate = 300L,
+            ammoConsumption = 1,
+            bulletSpeed = 15f,
+            bulletColor = Color.Cyan
+        ),
+        Weapon(
+            type = WeaponType.MISSILE,
+            name = "Missile",
+            icon = "🚀",
+            cost = 250,
+            description = "Homing missile",
+            damage = 3,
+            fireRate = 800L,
+            ammoConsumption = 2,
+            bulletSpeed = 10f,
+            bulletColor = Color.Red
+        ),
+        Weapon(
+            type = WeaponType.PLASMA_CANNON,
+            name = "Plasma",
+            icon = "⚛️",
+            cost = 500,
+            description = "Plasma beam",
+            damage = 2,
+            fireRate = 100L,
+            ammoConsumption = 2,
+            bulletSpeed = 20f,
+            bulletColor = Color.Green
+        )
+    )
+
+    val unlockedWeapons = setOf(WeaponType.BASIC_LASER)
+
+    StorePreview(
+        weapons = sampleWeapons,
+        unlockedWeapons = unlockedWeapons,
+        onWeaponClick = {}
+    )
 }

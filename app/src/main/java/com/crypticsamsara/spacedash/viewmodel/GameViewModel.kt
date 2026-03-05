@@ -67,7 +67,7 @@ class GameViewModel(
 ): ViewModel() {
 
     var gameState by mutableStateOf(GameState())
-    private set
+        private set
 
     // obstacles list
     val obstacles = mutableStateListOf<Obstacle>()
@@ -118,9 +118,7 @@ class GameViewModel(
     private var lastDifficultyLevel = 1
 
     var onExplosion: ((Float, Float) -> Unit)? = null
-
     var onComboMilestone: ((Int) -> Unit)? = null
-
     var isScreenShakeEnabled: Boolean = true
 
     // Scoring constraints
@@ -142,6 +140,13 @@ class GameViewModel(
     // returns how much ammo the active weapon consumes per shot
     private fun currentAmmoConsumption(): Int = gameState.currentWeapon.ammoConsumption
 
+    init {
+        viewModelScope.launch {
+            sessionHighScore = preferencesManager?.getHighScore() ?: 0
+            gameState = gameState.copy(highScore = sessionHighScore)
+        }
+        loadCredits()
+    }
 
     fun setScreenSize (width: Float, height: Float) {
         screenWidth = width
@@ -637,6 +642,7 @@ class GameViewModel(
         // Update high score if current is higher
         if (gameState.score > sessionHighScore) {
             sessionHighScore = gameState.score
+            preferencesManager?.saveHighScore(sessionHighScore)
         }
 
         // credits earned
@@ -647,8 +653,10 @@ class GameViewModel(
         ) ?: 0
 
         // award credits
-        viewModelScope.launch {
-            creditsManager?.addCredits(creditsEarned)
+        if (creditsEarned > 0) {
+            viewModelScope.launch {
+                creditsManager?.addCredits(creditsEarned)
+            }
         }
 
        gameState = gameState.copy(
@@ -796,7 +804,7 @@ class GameViewModel(
             val bulletY = bullet.y
 
             // Simple circle-circle collision
-            val distance = kotlin.math.sqrt(
+            val distance = sqrt(
                 (bulletX - obstaclePixelX) * (bulletX - obstaclePixelX) +
                         (bulletY - obstaclePixelY) * (bulletY - obstaclePixelY)
             )
@@ -831,13 +839,15 @@ class GameViewModel(
 
                     // credits update
                     val instantCredits = CreditsManager.CREDITS_PER_OBSTACLE
+
                     viewModelScope.launch {
                         creditsManager?.addCredits(instantCredits)
                     }
 
                     gameState = gameState.copy(
                         score = gameState.score + destroyPoints,
-                        obstaclesDestroyed = gameState.obstaclesDestroyed + 1
+                        obstaclesDestroyed = gameState.obstaclesDestroyed + 1,
+                        credits = gameState.credits + instantCredits
                     )
 
                     // FLOATING TEXT for destruction
@@ -851,13 +861,14 @@ class GameViewModel(
                 } else {
                     // Obstacle damaged but not destroyed
                     obstaclesToUpdate.add(Pair(obstacle.id, newHP))
+                    }
                 }
-            }
             }
         }
 
         // Remove collided bullets and obstacles
     bullets.removeAll { bulletsToRemove.contains(it.id) }
+
         // Update obstacle HP
         obstaclesToUpdate.forEach { (obstacleId, newHP) ->
             val index = obstacles.indexOfFirst { it.id == obstacleId }
@@ -1045,34 +1056,28 @@ class GameViewModel(
     }
 
     fun getWeaponUnlockProgress(weapon: Weapon): Float {
-        if (gameState.unlockedWeapons.contains(weapon.type)) {
+        if (gameState.unlockedWeapons.contains(weapon.type))
             return 1f
-        }
         return (gameState.credits.toFloat() / weapon.cost.toFloat()).coerceIn(0f, 1f)
     }
-
 
     fun onButtonClick() {
         soundManager?.playClick()
         hapticManager?.lightTap()
     }
 
-    fun getCurrentDifficultyLevel(): Int {
-        return DifficultyManager.getDifficultyLevel(gameState.survivalTime)
-    }
+    fun getCurrentDifficultyLevel(): Int =
+        DifficultyManager.getDifficultyLevel(gameState.survivalTime)
 
-    fun getCurrentDifficultyDescription(): String {
-        return DifficultyManager.getDifficultyDescription(gameState.survivalTime)
-    }
+    fun getCurrentDifficultyDescription(): String =
+        DifficultyManager.getDifficultyDescription(gameState.survivalTime)
 
-    fun getCurrentDifficultyColor(): Color {
-        return DifficultyManager.getDifficultyColor(gameState.survivalTime)
-    }
+    fun getCurrentDifficultyColor(): Color =
+        DifficultyManager.getDifficultyColor(gameState.survivalTime)
 
     fun refillAmmo(amount: Int) {
         val newAmmo = (gameState.currentAmmo + amount).coerceAtMost(gameState.maxAmmo)
         gameState = gameState.copy(currentAmmo = newAmmo)
-
         soundManager?.playPowerUp()
     }
 

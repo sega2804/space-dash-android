@@ -10,6 +10,7 @@ import androidx.datastore.preferences.core.stringSetPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import com.crypticsamsara.spacedash.model.WeaponType
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 
 private val Context.dataStore: DataStore<Preferences> by preferencesDataStore(name = "game_prefs")
@@ -25,6 +26,10 @@ class PreferencesManager(private val context: Context) {
 
     val highScore: Flow<Int> = context.dataStore.data.map { preferences ->
         preferences[HIGH_SCORE_KEY] ?: 0
+    }
+
+    suspend fun getHighScore(): Int {
+        return highScore.first()
     }
 
     suspend fun saveHighScore(score: Int) {
@@ -86,7 +91,7 @@ class PreferencesManager(private val context: Context) {
         }
     }
 
-  // testing for reseting to only basic laser unlocked
+  // testing for resetting to only basic laser unlocked
     suspend fun resetUnlockedWeapons() {
         context.dataStore.edit { preferences ->
             preferences[UNLOCKED_WEAPONS_KEY] = setOf("BASIC_LASER")

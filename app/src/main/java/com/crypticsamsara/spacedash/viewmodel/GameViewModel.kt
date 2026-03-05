@@ -59,6 +59,7 @@ data class GameState(
     val credits: Int = 0,
     val creditsEarned: Int = 0
 )
+
 class GameViewModel(
      val soundManager: SoundManager? = null,
      val hapticManager: HapticManager? = null,
@@ -143,7 +144,14 @@ class GameViewModel(
     init {
         viewModelScope.launch {
             sessionHighScore = preferencesManager?.getHighScore() ?: 0
-            gameState = gameState.copy(highScore = sessionHighScore)
+
+            val persistedWeapons = preferencesManager?.getUnlockedWeapons()
+                ?: setOf(WeaponType.BASIC_LASER)
+
+            gameState = gameState.copy(
+                highScore = sessionHighScore,
+                unlockedWeapons = persistedWeapons
+            )
         }
         loadCredits()
     }
@@ -972,6 +980,7 @@ class GameViewModel(
     fun stopGame() {
         if (gameState.score > sessionHighScore) {
             sessionHighScore = gameState.score
+            preferencesManager?.saveHighScore(sessionHighScore)
         }
         gameState = gameState.copy(
             isPlaying = false,
@@ -1038,6 +1047,8 @@ class GameViewModel(
                     unlockedWeapons = newUnlockedWeapons,
                     credits = gameState.credits - weapon.cost
                 )
+
+                preferencesManager?.saveUnlockedWeapons(newUnlockedWeapons)
 
                 // Success feedback
                 soundManager?.playSuccess()

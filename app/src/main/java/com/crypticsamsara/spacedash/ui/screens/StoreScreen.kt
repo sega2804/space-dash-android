@@ -28,20 +28,23 @@ import com.crypticsamsara.spacedash.model.Weapon
 import com.crypticsamsara.spacedash.model.WeaponFactory
 import com.crypticsamsara.spacedash.model.WeaponType
 import com.crypticsamsara.spacedash.ui.theme.SpaceDashTheme
+import com.crypticsamsara.spacedash.viewmodel.GameViewModel
 import kotlinx.coroutines.delay
 
 @Composable
 fun StoreScreen(
-    currentCredits: Int,
-    unlockedWeapons: Set<WeaponType>,
-    onPurchaseWeapon: (Weapon) -> Unit,
+    viewModel: GameViewModel,
     onBackPressed: () -> Unit,
-    onWeaponSelected: (Weapon) -> Unit = {},
     modifier: Modifier = Modifier
 ){
+    val gameState = viewModel.gameState
+    val currentCredits = gameState.credits
+    val unlockedWeapons = gameState.unlockedWeapons
+
     var selectedWeapon by remember { mutableStateOf<Weapon?>(null) }
     var showInsufficientCredits by remember { mutableStateOf(false) }
     var insufficientAmount by remember { mutableIntStateOf(0) }
+    var showPurchaseSuccess by remember { mutableStateOf<String?>(null) }
 
     // get all weapons
     val allWeapons = remember { WeaponFactory.getAllWeapons() }
@@ -66,7 +69,10 @@ fun StoreScreen(
             // Header
             StoreHeader(
                 currentCredits = currentCredits,
-                onBackPressed = onBackPressed
+                onBackPressed = {
+                    viewModel.onButtonClick()
+                    onBackPressed()
+                }
             )
 
             Spacer(modifier = Modifier.height(24.dp))
@@ -101,18 +107,26 @@ fun StoreScreen(
                         weapon = weapon,
                         isUnlocked = isUnlocked,
                         isSelected = selectedWeapon == weapon,
+                        canAfford = currentCredits >= weapon.cost,
                         onClick = {
+                            viewModel.onButtonClick()
                             selectedWeapon = weapon
-                            if (!isUnlocked) {
+
+                            if (isUnlocked) {
+                                // Already owned — equip it
+                                viewModel.changeWeapon(weapon.type)
+                            } else {
+                                // Try to purchase
                                 if (currentCredits >= weapon.cost) {
-                                    onPurchaseWeapon(weapon)
-                                    selectedWeapon = null
+                                    val purchased = viewModel.purchaseWeapon(weapon)
+                                    if (purchased) {
+                                        showPurchaseSuccess = weapon.name
+                                        selectedWeapon = null
+                                    }
                                 } else {
                                     insufficientAmount = weapon.cost
                                     showInsufficientCredits = true
                                 }
-                            } else {
-                                onWeaponSelected(weapon)
                             }
                         }
                     )
@@ -130,12 +144,45 @@ fun StoreScreen(
                     .align(Alignment.Center)
                     .padding(32.dp)
             )
-
             LaunchedEffect(Unit) {
                 delay(3000)
                 showInsufficientCredits = false
             }
         }
+
+        // Purchase Success Message
+       showPurchaseSuccess?.let { weaponName ->
+           Box(
+               modifier = Modifier
+                   .align(Alignment.Center)
+                   .padding(32.dp)
+                   .clip(RoundedCornerShape(16.dp))
+                   .background(Color(0xFF1A3A1A))
+                   .border(2.dp, Color.Green, RoundedCornerShape(16.dp))
+                   .padding(24.dp),
+               contentAlignment = Alignment.Center
+           ) {
+               Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                   Text("✅", fontSize = 40.sp)
+                   Spacer(modifier = Modifier.height(8.dp))
+                   Text(
+                       text = "$weaponName Unlocked!",
+                       fontSize = 20.sp,
+                       fontWeight = FontWeight.Bold,
+                       color = Color.Green
+                   )
+                   Text(
+                       text = "Equipped automatically",
+                       fontSize = 13.sp,
+                       color = Color.Gray
+                   )
+               }
+           }
+           LaunchedEffect(weaponName) {
+               delay(2500)
+               showPurchaseSuccess = null
+           }
+       }
     }
 }
 
@@ -178,6 +225,7 @@ private fun WeaponStoreCard(
     weapon: Weapon,
     isUnlocked: Boolean,
     isSelected: Boolean,
+    canAfford: Boolean,
     onClick: () -> Unit
 ) {
     // Animation for selection
@@ -214,7 +262,11 @@ private fun WeaponStoreCard(
             )
             .border(
                 width = if (isSelected) 3.dp else 1.dp,
-                color = if (isUnlocked) weapon.bulletColor else Color.Gray,
+                color = when {
+                    isUnlocked -> weapon.bulletColor
+                    !canAfford -> Color.Gray.copy(alpha = 0.4f)
+                    else -> Color.Gray
+                },
                 shape = RoundedCornerShape(20.dp)
             )
             .clickable(onClick = onClick)
@@ -246,7 +298,6 @@ private fun WeaponStoreCard(
                         fontSize = 36.sp,
                         modifier = Modifier.scale(if (isUnlocked) 1f else 0.6f)
                     )
-
                     // Lock overlay
                     if (!isUnlocked) {
                         Text(
@@ -371,7 +422,7 @@ private fun WeaponStoreCard(
                                 text = weapon.cost.toString(),
                                 fontSize = 28.sp,
                                 fontWeight = FontWeight.Bold,
-                                color = Color(0xFFFFD700)
+                                color = if (canAfford) Color(0xFFFFD700) else Color(0xFFFF4444)
                             )
                         }
                     }
@@ -384,15 +435,15 @@ private fun WeaponStoreCard(
                             .padding(start = 16.dp)
                             .height(48.dp),
                         colors = ButtonDefaults.buttonColors(
-                            containerColor = Color(0xFFFFD700)
+                            containerColor = if (canAfford) Color(0xFFFFD700) else Color.DarkGray,
+                            contentColor = if (canAfford) Color.Black else Color.Gray
                         ),
                         shape = RoundedCornerShape(12.dp)
                     ) {
                         Text(
-                            text = "🛒 PURCHASE",
-                            fontSize = 16.sp,
+                            text = if (canAfford) "🛒 PURCHASE" else "💸 TOO EXPENSIVE",
+                            fontSize = 14.sp,
                             fontWeight = FontWeight.Bold,
-                            color = Color.Black
                         )
                     }
                 }
